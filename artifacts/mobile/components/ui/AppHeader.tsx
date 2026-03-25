@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   sloganText: {
     fontSize: 11,
     fontFamily: "Inter_500Medium",
-    color: "#4A7C59",
+    color: "#A0441A",
     letterSpacing: 0.2,
   },
 
