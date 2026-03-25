@@ -33,14 +33,14 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false, presentation: "modal" }} />
-      <Stack.Screen name="product/[id]" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="order/[id]" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="seller/[id]" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="checkout" options={{ headerShown: false, presentation: "modal" }} />
-      <Stack.Screen name="chat/[id]" options={{ headerShown: false, presentation: "card" }} />
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: true, fullScreenGestureEnabled: true }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="auth" options={{ headerShown: false, presentation: "modal", gestureEnabled: true, fullScreenGestureEnabled: true }} />
+      <Stack.Screen name="product/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
+      <Stack.Screen name="order/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
+      <Stack.Screen name="seller/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
+      <Stack.Screen name="checkout" options={{ headerShown: false, presentation: "modal", gestureEnabled: true, fullScreenGestureEnabled: true }} />
+      <Stack.Screen name="chat/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
     </Stack>
   );
 }
