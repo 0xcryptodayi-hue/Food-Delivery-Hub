@@ -211,19 +211,33 @@ export default function AuthScreen() {
 
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>veya demo ile giriş yap</Text>
+          <Text style={styles.dividerText}>demo hesaplar (şifre: demo123)</Text>
           <View style={styles.dividerLine} />
         </View>
 
-        <View style={styles.demoRow}>
-          <Pressable style={styles.demoBtn} onPress={() => demoLogin("buyer@demo.com")}>
-            <Text style={styles.demoBtnIcon}>🛒</Text>
-            <Text style={styles.demoBtnText}>Demo Alıcı</Text>
-          </Pressable>
-          <Pressable style={styles.demoBtn} onPress={() => demoLogin("ayse@demo.com")}>
-            <Text style={styles.demoBtnIcon}>🍳</Text>
-            <Text style={styles.demoBtnText}>Demo Satıcı</Text>
-          </Pressable>
+        <Pressable style={[styles.demoBtn, styles.demoBtnBuyer]} onPress={() => demoLogin("buyer@demo.com")}>
+          <Text style={styles.demoBtnIcon}>🛒</Text>
+          <View style={styles.demoBtnInfo}>
+            <Text style={styles.demoBtnTitle}>Mehmet Alıcı</Text>
+            <Text style={styles.demoBtnSub}>buyer@demo.com · Alıcı hesabı</Text>
+          </View>
+          <Feather name="arrow-right" size={16} color={Colors.light.primary} />
+        </Pressable>
+
+        <View style={styles.demoSellersGrid}>
+          {[
+            { email: "ayse@demo.com",   icon: "🥐", name: "Ayşe Hanım",       spec: "Börek & Poğaça" },
+            { email: "fatma@demo.com",  icon: "🌿", name: "Fatma Teyze",       spec: "Sarma & Dolma" },
+            { email: "zeynep@demo.com", icon: "🍯", name: "Zeynep'in Mutfağı", spec: "Baklava & Tatlı" },
+            { email: "elif@demo.com",   icon: "🥟", name: "Elif Abla",         spec: "Mantı & Köfte" },
+            { email: "meryem@demo.com", icon: "🍪", name: "Meryem Hanım",      spec: "Kurabiye & Poğaça" },
+          ].map(acc => (
+            <Pressable key={acc.email} style={styles.demoSellerBtn} onPress={() => demoLogin(acc.email)}>
+              <Text style={styles.demoSellerIcon}>{acc.icon}</Text>
+              <Text style={styles.demoSellerName}>{acc.name}</Text>
+              <Text style={styles.demoSellerSpec}>{acc.spec}</Text>
+            </Pressable>
+          ))}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -271,12 +285,30 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.light.border },
   dividerText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textMuted },
-  demoRow: { flexDirection: "row", gap: 12 },
   demoBtn: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    paddingVertical: 14, borderRadius: 14, backgroundColor: Colors.light.backgroundSecondary,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14,
+    backgroundColor: Colors.light.backgroundSecondary,
     borderWidth: 1, borderColor: Colors.light.border,
+    marginBottom: 10,
   },
-  demoBtnIcon: { fontSize: 20 },
-  demoBtnText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.textSecondary },
+  demoBtnBuyer: {
+    borderColor: Colors.light.primary + "40",
+    backgroundColor: Colors.light.primary + "08",
+  },
+  demoBtnIcon: { fontSize: 24 },
+  demoBtnInfo: { flex: 1 },
+  demoBtnTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text },
+  demoBtnSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textMuted, marginTop: 2 },
+  demoSellersGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  demoSellerBtn: {
+    width: "47%", flexGrow: 1,
+    alignItems: "center", paddingVertical: 14, paddingHorizontal: 8,
+    borderRadius: 14, backgroundColor: Colors.light.backgroundSecondary,
+    borderWidth: 1, borderColor: Colors.light.border,
+    gap: 4,
+  },
+  demoSellerIcon: { fontSize: 28 },
+  demoSellerName: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.text, textAlign: "center" },
+  demoSellerSpec: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textMuted, textAlign: "center" },
 });

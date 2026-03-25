@@ -14,7 +14,6 @@ import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
 
 const CATEGORIES = [
-  { slug: "all",        name: "Tümü" },
   { slug: "borek",      name: "Börek",        subcategories: ["Sigara böreği", "Paçanga böreği", "Su böreği", "Ispanaklı börek", "Kıymalı börek", "Patatesli börek"] },
   { slug: "pogaca",     name: "Poğaça",       subcategories: ["Peynirli poğaça", "Zeytinli poğaça", "Patatesli poğaça", "Sucuklu poğaça", "Sade poğaça"] },
   { slug: "baklava",    name: "Baklava",      subcategories: ["Fıstıklı baklava", "Cevizli baklava", "Sütlü baklava", "Fındıklı baklava", "Burma baklava"] },
@@ -22,7 +21,6 @@ const CATEGORIES = [
   { slug: "sarma",      name: "Sarma / Dolma", subcategories: ["Zeytinyağlı yaprak sarma", "Etli yaprak sarma", "Biber dolması", "Patlıcan dolması", "Kabak dolması"] },
   { slug: "icli-kofte", name: "İçli Köfte",   subcategories: ["Kızartma içli köfte", "Haşlama içli köfte", "Fırın içli köfte"] },
   { slug: "manti",      name: "Mantı",        subcategories: ["Kayseri mantısı", "Sulu mantı", "Kızartma mantı", "Fırın mantı"] },
-  { slug: "soup",       name: "Çorba",        subcategories: ["Mercimek çorbası", "Ezogelin çorbası", "Tarhana çorbası", "Domates çorbası", "Yayla çorbası"] },
   { slug: "dessert",    name: "Tatlılar",     subcategories: ["Sütlaç", "Kazandibi", "Lokma", "Revani", "Kadayıf", "Şekerpare"] },
 ];
 
