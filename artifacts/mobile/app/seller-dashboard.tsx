@@ -493,25 +493,6 @@ export default function SellerDashboardScreen() {
         )}
       </View>
 
-      {/* ─── Stats Strip ─── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.statsScroll} contentContainerStyle={s.statsRow}>
-        {[
-          { icon: "package", label: "Toplam Ürün", value: totalProducts, color: Colors.light.primary },
-          { icon: "check-circle", label: "Stokta Aktif", value: activeProducts, color: Colors.light.success },
-          { icon: "tag", label: "İndirimli", value: discountedProducts, color: "#E53935" },
-          { icon: "dollar-sign", label: "Bakiye", value: `₺${(wallet?.availableBalance ?? 0).toFixed(0)}`, color: Colors.light.warning },
-          { icon: "zap", label: "Reklam", value: hasActiveCampaign ? "Aktif ✓" : "Yok", color: Colors.light.sponsored },
-        ].map(card => (
-          <View key={card.label} style={[s.statCard, { borderColor: card.color + "30" }]}>
-            <View style={[s.statIconWrap, { backgroundColor: card.color + "18" }]}>
-              <Feather name={card.icon as "package"} size={14} color={card.color} />
-            </View>
-            <Text style={[s.statValue, { color: card.color }]}>{card.value}</Text>
-            <Text style={s.statLabel}>{card.label}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
       {/* ─── Tab Bar ─── */}
       <View style={s.tabBar}>
         {TABS.map(t => {
