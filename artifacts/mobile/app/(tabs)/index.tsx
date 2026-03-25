@@ -208,10 +208,10 @@ export default function HomeScreen() {
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
+    <View style={styles.container}>
 
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topInset + 10 }]}>
         <Image
           source={require("@/assets/images/logo.png")}
           style={styles.headerLogo}
@@ -220,18 +220,18 @@ export default function HomeScreen() {
         <View style={styles.headerActions}>
           {/* Bildirim */}
           <Pressable
-            style={styles.iconBtn}
+            style={styles.headerIconBtn}
             onPress={() => user ? router.push("/notifications") : router.push("/auth")}
           >
-            <Feather name="bell" size={20} color={Colors.light.text} />
+            <Feather name="bell" size={20} color={Colors.light.primaryDark} />
           </Pressable>
 
           {/* Sepet */}
-          <Pressable style={styles.cartBtn} onPress={() => router.push("/cart")}>
+          <Pressable style={styles.headerIconBtn} onPress={() => router.push("/cart")}>
             <Feather
               name="shopping-cart"
               size={20}
-              color={itemCount > 0 ? Colors.light.primary : Colors.light.text}
+              color={itemCount > 0 ? Colors.light.primary : Colors.light.primaryDark}
             />
             {itemCount > 0 && (
               <View style={styles.cartBadge}>
@@ -240,15 +240,15 @@ export default function HomeScreen() {
             )}
           </Pressable>
 
-          {/* Kategori simgesi - en sağda */}
+          {/* Kategori simgesi */}
           <Pressable
-            style={[styles.iconBtn, selectedCategory !== "all" && styles.iconBtnActive]}
+            style={[styles.headerIconBtn, selectedCategory !== "all" && styles.headerIconBtnActive]}
             onPress={() => setShowCategories(true)}
           >
             <Feather
               name="grid"
               size={20}
-              color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.text}
+              color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.primaryDark}
             />
             {selectedCategory !== "all" && <View style={styles.activeDot} />}
           </Pressable>
@@ -360,41 +360,36 @@ const styles = StyleSheet.create({
   /* Header */
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingBottom: 14,
+    paddingHorizontal: 16, paddingVertical: 10,
+    backgroundColor: "#F5EDD5",
+    borderBottomWidth: 1, borderBottomColor: "#E8D5A8",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(160,110,30,0.18)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 4 },
+      web: { boxShadow: "0 3px 10px rgba(160,110,30,0.13)" },
+    }),
   },
-  headerLogo: { width: 150, height: 60 },
-  headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
-  iconBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: Colors.light.surface,
+  headerLogo: { width: 160, height: 68 },
+  headerActions: { flexDirection: "row", gap: 4, alignItems: "center" },
+  headerIconBtn: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.55)",
     alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: Colors.light.borderLight,
   },
-  iconBtnActive: {
-    borderColor: Colors.light.primary,
-    backgroundColor: "#FFF0F0",
+  headerIconBtnActive: {
+    backgroundColor: "rgba(232,101,26,0.15)",
   },
   activeDot: {
     position: "absolute", top: 8, right: 8,
     width: 7, height: 7, borderRadius: 4,
     backgroundColor: Colors.light.primary,
   },
-  cartBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: Colors.light.surface,
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: Colors.light.borderLight,
-    ...Platform.select({
-      ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6 },
-      android: { elevation: 2 },
-    }),
-  },
   cartBadge: {
-    position: "absolute", top: -4, right: -4,
-    backgroundColor: Colors.light.primary, borderRadius: 10,
-    minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
+    position: "absolute", top: 4, right: 4,
+    backgroundColor: Colors.light.primary, borderRadius: 8,
+    minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
   },
-  cartBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
+  cartBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
 
   /* Search */
   searchRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, marginBottom: 10, alignItems: "center" },
