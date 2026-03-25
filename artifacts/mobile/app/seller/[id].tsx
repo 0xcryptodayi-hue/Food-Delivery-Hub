@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Platform, ActivityIndicator, FlatList,
+  Platform, ActivityIndicator, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -12,17 +12,196 @@ import { ProductCard } from "@/components/ui/ProductCard";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 
+type Review = {
+  id: number;
+  rating: number;
+  comment?: string;
+  buyerName: string;
+  productTitle?: string;
+  createdAt: string;
+};
+
+function StarRow({ rating, size = 14, gap = 3 }: { rating: number; size?: number; gap?: number }) {
+  return (
+    <View style={{ flexDirection: "row", gap }}>
+      {[1, 2, 3, 4, 5].map(s => (
+        <Ionicons
+          key={s}
+          name={s <= Math.round(rating) ? "star" : "star-outline"}
+          size={size}
+          color={s <= Math.round(rating) ? Colors.light.star : Colors.light.border}
+        />
+      ))}
+    </View>
+  );
+}
+
+function RatingSummary({ reviews }: { reviews: Review[] }) {
+  if (reviews.length === 0) return null;
+  const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+  const dist = [5, 4, 3, 2, 1].map(star => ({
+    star,
+    count: reviews.filter(r => r.rating === star).length,
+    pct: reviews.length > 0 ? (reviews.filter(r => r.rating === star).length / reviews.length) * 100 : 0,
+  }));
+
+  return (
+    <View style={summaryStyles.card}>
+      {/* Left: big rating */}
+      <View style={summaryStyles.left}>
+        <Text style={summaryStyles.bigRating}>{avg.toFixed(1)}</Text>
+        <StarRow rating={avg} size={16} gap={3} />
+        <Text style={summaryStyles.totalText}>{reviews.length} yorum</Text>
+      </View>
+
+      {/* Right: distribution bars */}
+      <View style={summaryStyles.right}>
+        {dist.map(({ star, count, pct }) => (
+          <View key={star} style={summaryStyles.barRow}>
+            <Text style={summaryStyles.barStar}>{star}</Text>
+            <Ionicons name="star" size={10} color={Colors.light.star} />
+            <View style={summaryStyles.barTrack}>
+              <View style={[summaryStyles.barFill, { width: `${pct}%` as any }]} />
+            </View>
+            <Text style={summaryStyles.barCount}>{count}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const summaryStyles = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    backgroundColor: Colors.light.surface,
+    borderRadius: 18, padding: 18, marginBottom: 14,
+    gap: 20,
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 2 },
+      web: { boxShadow: "0 2px 12px rgba(60,30,10,0.07)" },
+    }),
+  },
+  left: { alignItems: "center", justifyContent: "center", gap: 4, minWidth: 72 },
+  bigRating: { fontSize: 42, fontFamily: "Inter_700Bold", color: Colors.light.text, lineHeight: 48 },
+  totalText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
+  right: { flex: 1, gap: 5, justifyContent: "center" },
+  barRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  barStar: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.light.textMuted, width: 10, textAlign: "right" },
+  barTrack: { flex: 1, height: 6, backgroundColor: Colors.light.borderLight, borderRadius: 3, overflow: "hidden" },
+  barFill: { height: "100%", backgroundColor: Colors.light.star, borderRadius: 3 },
+  barCount: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, width: 16, textAlign: "right" },
+});
+
+function ReviewCard({ review }: { review: Review }) {
+  const [expanded, setExpanded] = useState(false);
+  const longComment = (review.comment?.length ?? 0) > 120;
+  const displayComment = !expanded && longComment
+    ? review.comment!.slice(0, 120) + "..."
+    : review.comment;
+  const date = new Date(review.createdAt);
+  const dateStr = date.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+
+  return (
+    <View style={reviewStyles.card}>
+      <View style={reviewStyles.header}>
+        <View style={reviewStyles.avatar}>
+          <Text style={reviewStyles.avatarText}>{review.buyerName[0]?.toUpperCase()}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={reviewStyles.name}>{review.buyerName}</Text>
+          <StarRow rating={review.rating} size={13} gap={2} />
+        </View>
+        <Text style={reviewStyles.date}>{dateStr}</Text>
+      </View>
+
+      {review.productTitle && (
+        <View style={reviewStyles.productTag}>
+          <Feather name="package" size={11} color={Colors.light.primary} />
+          <Text style={reviewStyles.productTagText} numberOfLines={1}>{review.productTitle}</Text>
+        </View>
+      )}
+
+      {review.comment ? (
+        <View style={{ marginTop: 10 }}>
+          <Text style={reviewStyles.comment}>{displayComment}</Text>
+          {longComment && (
+            <Pressable onPress={() => setExpanded(!expanded)} hitSlop={8}>
+              <Text style={reviewStyles.expandBtn}>{expanded ? "Daha az göster" : "Devamını oku"}</Text>
+            </Pressable>
+          )}
+        </View>
+      ) : (
+        <Text style={reviewStyles.noComment}>Yorum yapılmadı</Text>
+      )}
+
+      <View style={reviewStyles.footer}>
+        <View style={[reviewStyles.ratingPill, { backgroundColor: ratingColor(review.rating) + "15" }]}>
+          <Ionicons name="star" size={10} color={ratingColor(review.rating)} />
+          <Text style={[reviewStyles.ratingPillText, { color: ratingColor(review.rating) }]}>{review.rating}/5</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ratingColor(r: number) {
+  if (r >= 4) return Colors.light.success;
+  if (r >= 3) return Colors.light.warning;
+  return Colors.light.accent;
+}
+
+const reviewStyles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: 16, padding: 14, marginBottom: 10,
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 6 },
+      android: { elevation: 1 },
+      web: { boxShadow: "0 1px 8px rgba(60,30,10,0.06)" },
+    }),
+  },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  avatar: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: Colors.light.primary + "18",
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  avatarText: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.light.primary },
+  name: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 3 },
+  date: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 1 },
+  productTag: {
+    flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8,
+    backgroundColor: Colors.light.primary + "10", borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 4, alignSelf: "flex-start",
+  },
+  productTagText: { fontSize: 11, fontFamily: "Inter_500Medium", color: Colors.light.primary },
+  comment: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, lineHeight: 21 },
+  expandBtn: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.light.primary, marginTop: 4 },
+  noComment: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, fontStyle: "italic", marginTop: 8 },
+  footer: { flexDirection: "row", marginTop: 10 },
+  ratingPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  ratingPillText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+});
+
 export default function SellerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { addItem } = useCart();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+  const [reviewsExpanded, setReviewsExpanded] = useState(false);
 
   const { data: seller, isLoading: sellerLoading } = useGetUser(parseInt(id ?? "0"));
   const { data: products, isLoading: productsLoading } = useGetUserProducts(parseInt(id ?? "0"));
-  const { data: reviews } = useGetSellerReviews(parseInt(id ?? "0"));
+  const { data: reviewsRaw } = useGetSellerReviews(parseInt(id ?? "0"));
   const createConv = useCreateConversation();
+
+  const reviews = (reviewsRaw ?? []) as Review[];
+  const PREVIEW_COUNT = 3;
+  const displayedReviews = reviewsExpanded ? reviews : reviews.slice(0, PREVIEW_COUNT);
+  const hasMore = reviews.length > PREVIEW_COUNT;
 
   const handleMessage = async () => {
     if (!user) { router.push("/auth"); return; }
@@ -51,7 +230,7 @@ export default function SellerScreen() {
     );
   }
 
-  const topReviews = (reviews ?? []).slice(0, 3);
+  const avg = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : null;
 
   return (
     <ScrollView
@@ -63,26 +242,40 @@ export default function SellerScreen() {
         <Feather name="arrow-left" size={20} color={Colors.light.text} />
       </Pressable>
 
+      {/* Profile */}
       <View style={styles.profileSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{seller.name[0]?.toUpperCase()}</Text>
+        {seller.storeImage ? (
+          <Image source={{ uri: seller.storeImage }} style={styles.storeImage} />
+        ) : null}
+
+        <View style={styles.avatarWrap}>
+          {seller.avatar ? (
+            <Image source={{ uri: seller.avatar }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarText}>{seller.name[0]?.toUpperCase()}</Text>
+            </View>
+          )}
         </View>
+
         <Text style={styles.sellerName}>{seller.name}</Text>
+
         {seller.address && (
           <View style={styles.addressRow}>
-            <Feather name="map-pin" size={14} color={Colors.light.textMuted} />
+            <Feather name="map-pin" size={13} color={Colors.light.textMuted} />
             <Text style={styles.address}>{seller.address}</Text>
           </View>
         )}
 
+        {/* Stats */}
         <View style={styles.statsRow}>
-          {seller.rating != null && (
+          {avg != null && (
             <View style={styles.statBox}>
-              <View style={styles.statIconRow}>
+              <View style={styles.statTop}>
                 <Ionicons name="star" size={16} color={Colors.light.star} />
-                <Text style={styles.statValue}>{seller.rating.toFixed(1)}</Text>
+                <Text style={styles.statValue}>{avg.toFixed(1)}</Text>
               </View>
-              <Text style={styles.statLabel}>{seller.reviewCount} yorum</Text>
+              <Text style={styles.statLabel}>{reviews.length} Yorum</Text>
             </View>
           )}
           <View style={styles.statBox}>
@@ -97,18 +290,22 @@ export default function SellerScreen() {
 
         {user?.id !== parseInt(id ?? "0") && (
           <Pressable style={styles.messageBtn} onPress={handleMessage}>
-            <Feather name="message-circle" size={18} color={Colors.light.primary} />
+            <Feather name="message-circle" size={17} color={Colors.light.primary} />
             <Text style={styles.messageBtnText}>Mesaj Gönder</Text>
           </Pressable>
         )}
       </View>
 
+      {/* Products */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Ürünler ({products?.length ?? 0})</Text>
+        <Text style={styles.sectionTitle}>
+          Ürünler <Text style={styles.sectionCount}>({products?.length ?? 0})</Text>
+        </Text>
         {productsLoading ? (
           <ActivityIndicator color={Colors.light.primary} style={{ marginVertical: 20 }} />
         ) : (products ?? []).length === 0 ? (
           <View style={styles.empty}>
+            <Feather name="package" size={32} color={Colors.light.textMuted} />
             <Text style={styles.emptyText}>Henüz ürün yok</Text>
           </View>
         ) : (
@@ -127,34 +324,48 @@ export default function SellerScreen() {
         )}
       </View>
 
-      {topReviews.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Değerlendirmeler</Text>
-          {topReviews.map(review => (
-            <View key={review.id} style={styles.reviewCard}>
-              <View style={styles.reviewHeader}>
-                <View style={styles.reviewAvatar}>
-                  <Text style={styles.reviewAvatarText}>{review.buyerName[0]?.toUpperCase()}</Text>
-                </View>
-                <View style={styles.reviewHeaderInfo}>
-                  <Text style={styles.reviewerName}>{review.buyerName}</Text>
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map(s => (
-                      <Ionicons key={s} name="star" size={12} color={s <= review.rating ? Colors.light.star : Colors.light.border} />
-                    ))}
-                  </View>
-                </View>
-                <Text style={styles.reviewDate}>
-                  {new Date(review.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
-                </Text>
-              </View>
-              {review.comment && (
-                <Text style={styles.reviewComment}>{review.comment}</Text>
-              )}
-            </View>
-          ))}
+      {/* Reviews */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Değerlendirmeler <Text style={styles.sectionCount}>({reviews.length})</Text>
+          </Text>
         </View>
-      )}
+
+        {reviews.length === 0 ? (
+          <View style={styles.empty}>
+            <Feather name="message-square" size={32} color={Colors.light.textMuted} />
+            <Text style={styles.emptyText}>Henüz değerlendirme yok</Text>
+            <Text style={styles.emptySubText}>Bu satıcıdan alışveriş yapanlar yorum bırakabilir</Text>
+          </View>
+        ) : (
+          <>
+            <RatingSummary reviews={reviews} />
+
+            {displayedReviews.map(review => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+
+            {hasMore && (
+              <Pressable
+                style={styles.showMoreBtn}
+                onPress={() => setReviewsExpanded(!reviewsExpanded)}
+              >
+                <Feather
+                  name={reviewsExpanded ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={Colors.light.primary}
+                />
+                <Text style={styles.showMoreText}>
+                  {reviewsExpanded
+                    ? "Daha az göster"
+                    : `${reviews.length - PREVIEW_COUNT} yorum daha göster`}
+                </Text>
+              </Pressable>
+            )}
+          </>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -168,43 +379,64 @@ const styles = StyleSheet.create({
     margin: 16, width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.light.surface, alignItems: "center", justifyContent: "center",
     alignSelf: "flex-start",
-    ...Platform.select({ ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 4 }, android: { elevation: 1 } }),
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 4 },
+      android: { elevation: 1 },
+      web: { boxShadow: "0 1px 6px rgba(0,0,0,0.07)" },
+    }),
   },
+
   profileSection: { alignItems: "center", paddingHorizontal: 20, paddingBottom: 24 },
-  avatar: {
-    width: 80, height: 80, borderRadius: 40,
+  storeImage: { width: "100%", height: 140, borderRadius: 16, marginBottom: -40 },
+  avatarWrap: {
+    width: 84, height: 84, borderRadius: 42,
+    borderWidth: 3, borderColor: Colors.light.background,
+    marginBottom: 12, overflow: "hidden",
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 10 },
+      android: { elevation: 4 },
+    }),
+  },
+  avatar: { width: "100%", height: "100%" },
+  avatarFallback: {
+    width: "100%", height: "100%", borderRadius: 42,
     backgroundColor: Colors.light.primary + "20", alignItems: "center", justifyContent: "center",
-    marginBottom: 12,
   },
   avatarText: { fontSize: 36, fontFamily: "Inter_700Bold", color: Colors.light.primary },
-  sellerName: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 6 },
+  sellerName: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 5 },
   addressRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 16 },
   address: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary },
-  statsRow: { flexDirection: "row", gap: 16, marginBottom: 20 },
-  statBox: { alignItems: "center", backgroundColor: Colors.light.backgroundSecondary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14 },
-  statIconRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  statValue: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.text },
-  statLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, marginTop: 2 },
+
+  statsRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  statBox: {
+    alignItems: "center", backgroundColor: Colors.light.surface,
+    paddingHorizontal: 18, paddingVertical: 12, borderRadius: 14,
+    borderWidth: 1, borderColor: Colors.light.borderLight,
+  },
+  statTop: { flexDirection: "row", alignItems: "center", gap: 4 },
+  statValue: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  statLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
+
   messageBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,
     paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14,
-    backgroundColor: Colors.light.primary + "15", borderWidth: 1.5, borderColor: Colors.light.primary,
+    backgroundColor: Colors.light.primary + "12", borderWidth: 1.5, borderColor: Colors.light.primary,
   },
   messageBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.primary },
-  section: { paddingHorizontal: 20, marginBottom: 16 },
+
+  section: { paddingHorizontal: 16, marginBottom: 20 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   sectionTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 12 },
-  empty: { alignItems: "center", paddingVertical: 24 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.textMuted },
-  reviewCard: {
-    backgroundColor: Colors.light.surface, borderRadius: 16, padding: 14, marginBottom: 10,
-    ...Platform.select({ ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 4 }, android: { elevation: 1 } }),
+  sectionCount: { fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+
+  empty: { alignItems: "center", paddingVertical: 28, gap: 8 },
+  emptyText: { fontFamily: "Inter_500Medium", fontSize: 15, color: Colors.light.textSecondary },
+  emptySubText: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textMuted, textAlign: "center" },
+
+  showMoreBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    paddingVertical: 13, borderRadius: 14, marginTop: 4,
+    backgroundColor: Colors.light.primary + "12", borderWidth: 1, borderColor: Colors.light.primary + "30",
   },
-  reviewHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  reviewAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.primary + "20", alignItems: "center", justifyContent: "center" },
-  reviewAvatarText: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.light.primary },
-  reviewHeaderInfo: { flex: 1 },
-  reviewerName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
-  starsRow: { flexDirection: "row", gap: 2, marginTop: 2 },
-  reviewDate: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
-  reviewComment: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, lineHeight: 20 },
+  showMoreText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.primary },
 });
