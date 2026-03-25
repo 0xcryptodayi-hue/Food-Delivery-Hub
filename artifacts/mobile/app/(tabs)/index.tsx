@@ -211,15 +211,13 @@ export default function HomeScreen() {
     <View style={styles.container}>
 
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: topInset + 10 }]}>
-        <View style={styles.headerLogoShadow}>
-          <View style={styles.headerLogoWrap}>
-            <Image
-              source={require("@/assets/images/logo.png")}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
-          </View>
+      <View style={[styles.header, { paddingTop: topInset + 8, paddingBottom: 10 }]}>
+        <View style={styles.headerLogoWrap}>
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.headerLogo}
+            resizeMode="cover"
+          />
         </View>
         <View style={styles.headerActions}>
           {/* Bildirim */}
@@ -364,31 +362,22 @@ const styles = StyleSheet.create({
   /* Header */
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: "#F5EDD5",
-    borderBottomWidth: 1, borderBottomColor: "#E8D5A8",
+    paddingHorizontal: 16,
+    backgroundColor: "#FCF1D5",
+    borderBottomWidth: 1, borderBottomColor: "#E5CFA0",
     ...Platform.select({
-      ios: { shadowColor: "rgba(160,110,30,0.18)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      ios: { shadowColor: "rgba(140,100,20,0.15)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
       android: { elevation: 4 },
-      web: { boxShadow: "0 3px 10px rgba(160,110,30,0.13)" },
-    }),
-  },
-  headerLogoShadow: {
-    borderRadius: 30,
-    backgroundColor: "#FFFFFF",
-    ...Platform.select({
-      ios: { shadowColor: "rgba(180,120,20,0.25)", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 8 },
-      android: { elevation: 4 },
-      web: { boxShadow: "0 2px 10px rgba(180,120,20,0.2)" },
+      web: { boxShadow: "0 3px 10px rgba(140,100,20,0.12)" },
     }),
   },
   headerLogoWrap: {
-    width: 148, height: 60,
-    borderRadius: 30,
+    width: 64, height: 64,
+    borderRadius: 32,
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FCF1D5",
   },
-  headerLogo: { width: 148, height: 60 },
+  headerLogo: { width: 64, height: 64 },
   headerActions: { flexDirection: "row", gap: 4, alignItems: "center" },
   headerIconBtn: {
     width: 42, height: 42, borderRadius: 21,
