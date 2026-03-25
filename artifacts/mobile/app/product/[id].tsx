@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Image, Alert, Platform, ActivityIndicator, Modal, TextInput,
+  Image, Platform, ActivityIndicator, Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useGetProduct, useToggleFavorite, getGetFavoritesQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
@@ -33,6 +34,21 @@ export default function ProductDetailScreen() {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
 
+  const [justAdded, setJustAdded] = useState(false);
+  const bannerAnim = useRef(new Animated.Value(0)).current;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showBanner = () => {
+    setJustAdded(true);
+    Animated.spring(bannerAnim, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 200 }).start();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      Animated.timing(bannerAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => setJustAdded(false));
+    }, 3500);
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
   const { data: product, isLoading } = useGetProduct(parseInt(id ?? "0"));
 
   useEffect(() => {
@@ -59,7 +75,8 @@ export default function ProductDetailScreen() {
         imageUrl: product.imageUrl, sellerId: product.sellerId, sellerName: product.sellerName,
       });
     }
-    Alert.alert("Sepete Eklendi", `${qty}x ${product.title} sepete eklendi`);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    showBanner();
   };
 
   const handleFavorite = () => {
@@ -234,34 +251,68 @@ export default function ProductDetailScreen() {
 
       {product.remainingStock > 0 && (
         <View style={[styles.footer, { paddingBottom: bottomInset + 16 }]}>
-          <View style={styles.qtyControl}>
-            <Pressable
-              style={styles.qtyBtn}
-              onPress={() => setQty(q => Math.max(1, q - 1))}
+          {/* Animated "Sepete Git" banner */}
+          {justAdded && (
+            <Animated.View
+              style={[
+                styles.addedBanner,
+                {
+                  opacity: bannerAnim,
+                  transform: [{ translateY: bannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
+                },
+              ]}
             >
-              <Feather name="minus" size={18} color={Colors.light.text} />
-            </Pressable>
-            <Text style={styles.qtyText}>{qty}</Text>
-            <Pressable
-              style={styles.qtyBtn}
-              onPress={() => setQty(q => Math.min(product.remainingStock, q + 1))}
-            >
-              <Feather name="plus" size={18} color={Colors.light.text} />
-            </Pressable>
-          </View>
-          <Pressable
-            style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.9 }]}
-            onPress={handleAddToCart}
-          >
-            <Text style={styles.addBtnText}>
-              Sepete Ekle — ₺{(product.price * qty).toFixed(0)}
-            </Text>
-            {cartQty > 0 && (
-              <View style={styles.cartIndicator}>
-                <Text style={styles.cartIndicatorText}>{cartQty}</Text>
+              <View style={styles.addedBannerLeft}>
+                <View style={styles.addedCheck}>
+                  <Feather name="check" size={13} color="#fff" />
+                </View>
+                <Text style={styles.addedBannerText}>
+                  {qty}x ürün sepete eklendi
+                </Text>
               </View>
-            )}
-          </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.goCartBtn, pressed && { opacity: 0.85 }]}
+                onPress={() => router.push("/cart")}
+              >
+                <Text style={styles.goCartBtnText}>Sepete Git</Text>
+                <Feather name="arrow-right" size={14} color={Colors.light.primary} />
+              </Pressable>
+            </Animated.View>
+          )}
+
+          {/* Bottom row: qty + buttons */}
+          <View style={styles.footerRow}>
+            <View style={styles.qtyControl}>
+              <Pressable style={styles.qtyBtn} onPress={() => setQty(q => Math.max(1, q - 1))}>
+                <Feather name="minus" size={18} color={Colors.light.text} />
+              </Pressable>
+              <Text style={styles.qtyText}>{qty}</Text>
+              <Pressable style={styles.qtyBtn} onPress={() => setQty(q => Math.min(product.remainingStock, q + 1))}>
+                <Feather name="plus" size={18} color={Colors.light.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.btnGroup}>
+              {cartQty > 0 && (
+                <Pressable
+                  style={({ pressed }) => [styles.viewCartBtn, pressed && { opacity: 0.85 }]}
+                  onPress={() => router.push("/cart")}
+                >
+                  <Feather name="shopping-cart" size={16} color={Colors.light.primary} />
+                  <Text style={styles.viewCartBtnText}>{cartQty}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.9 }]}
+                onPress={handleAddToCart}
+              >
+                <Feather name="plus" size={16} color="#fff" />
+                <Text style={styles.addBtnText}>
+                  Sepete Ekle — ₺{(product.price * qty).toFixed(0)}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
       )}
     </View>
@@ -313,19 +364,46 @@ const styles = StyleSheet.create({
   sellerRatingRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
   sellerRating: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.light.text },
   footer: {
-    backgroundColor: Colors.light.surface, paddingHorizontal: 20, paddingTop: 16,
-    borderTopWidth: 1, borderTopColor: Colors.light.borderLight, flexDirection: "row", gap: 12, alignItems: "center",
+    backgroundColor: Colors.light.surface,
+    paddingHorizontal: 16, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: Colors.light.borderLight,
   },
-  qtyControl: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: Colors.light.backgroundSecondary, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 },
-  qtyBtn: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  qtyText: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text, minWidth: 28, textAlign: "center" },
+  footerRow: { flexDirection: "row", gap: 10, alignItems: "center" },
+  btnGroup: { flex: 1, flexDirection: "row", gap: 8, alignItems: "center" },
+  qtyControl: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.light.backgroundSecondary, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 10 },
+  qtyBtn: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  qtyText: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.light.text, minWidth: 24, textAlign: "center" },
+  viewCartBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.light.primary + "15",
+    borderWidth: 1.5, borderColor: Colors.light.primary,
+    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 13,
+  },
+  viewCartBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.primary },
   addBtn: {
-    flex: 1, backgroundColor: Colors.light.primary, borderRadius: 16, paddingVertical: 16,
-    alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8,
+    flex: 1, backgroundColor: Colors.light.primary, borderRadius: 14, paddingVertical: 14,
+    alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6,
   },
-  addBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
-  cartIndicator: { backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 12, minWidth: 22, height: 22, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
-  cartIndicatorText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 11 },
+  addBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 },
+  addedBanner: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    backgroundColor: Colors.light.backgroundSecondary,
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10,
+    borderWidth: 1, borderColor: Colors.light.success + "40",
+  },
+  addedBannerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  addedCheck: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: Colors.light.success, alignItems: "center", justifyContent: "center",
+  },
+  addedBannerText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.text },
+  goCartBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.light.primary + "12",
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: Colors.light.primary + "30",
+  },
+  goCartBtnText: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.light.primary },
 
   reviewsSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   reviewsCount: { flexDirection: "row", alignItems: "center", gap: 4 },
