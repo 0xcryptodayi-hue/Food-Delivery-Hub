@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, ordersTable, productsTable, usersTable, walletTransactionsTable, notificationsTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, desc } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const PLATFORM_FEE_RATE = 0.10;
@@ -21,7 +21,7 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
     if (status) conditions.push(eq(ordersTable.status, status as typeof ordersTable.$inferSelect.status));
 
     const rows = await db.select().from(ordersTable).where(and(...conditions))
-      .orderBy(ordersTable.createdAt);
+      .orderBy(desc(ordersTable.createdAt));
 
     const userIds = [...new Set([...rows.map(r => r.buyerId), ...rows.map(r => r.sellerId)])];
     const users = userIds.length > 0
