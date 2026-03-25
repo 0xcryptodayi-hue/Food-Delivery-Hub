@@ -17,12 +17,19 @@ import { useAuth } from "@/context/AuthContext";
 const API_BASE = getBaseUrl();
 
 const CATEGORIES = [
-  { slug: "main-dish", name: "Ana Yemek" },
-  { slug: "soup", name: "Çorba" },
-  { slug: "dessert", name: "Tatlı" },
-  { slug: "breakfast", name: "Kahvaltı" },
-  { slug: "salad", name: "Salata" },
-  { slug: "pastry", name: "Börek" },
+  { slug: "borek",      name: "Börek" },
+  { slug: "pogaca",     name: "Poğaça" },
+  { slug: "baklava",    name: "Baklava" },
+  { slug: "kurabiye",   name: "Kurabiye" },
+  { slug: "sarma",      name: "Sarma / Dolma" },
+  { slug: "icli-kofte", name: "İçli Köfte" },
+  { slug: "manti",      name: "Mantı" },
+  { slug: "dessert",    name: "Tatlılar" },
+];
+
+const PORTION_PRESETS = [
+  "1 porsiyon", "2 porsiyon", "4 porsiyon",
+  "500 gr", "1 kg", "1.5 kg", "2 kg", "3 kg",
 ];
 
 const DISCOUNT_PRESETS = [0, 10, 15, 20, 25, 30, 40, 50];
@@ -127,7 +134,7 @@ function ProductForm({
 }) {
   const [form, setForm] = useState<ProductFormData>(initial ?? {
     title: "", description: "", price: "",
-    category: "main-dish", portion: "1 kişilik",
+    category: "borek", portion: "1 porsiyon",
     dailyStock: "10", prepTime: "30", imageUrl: "",
   });
   const [uploading, setUploading] = useState(false);
@@ -182,7 +189,29 @@ function ProductForm({
       <FormField label="Ürün Adı" value={form.title} onChange={v => set("title", v)} placeholder="Örn: Mercimek Çorbası" />
       <FormField label="Açıklama" value={form.description} onChange={v => set("description", v)} placeholder="Ürün açıklaması..." multiline />
       <FormField label="Fiyat (₺)" value={form.price} onChange={v => set("price", v)} placeholder="0" keyboardType="numeric" />
-      <FormField label="Porsiyon" value={form.portion} onChange={v => set("portion", v)} placeholder="1 kişilik" />
+
+      <View style={formStyles.fieldGroup}>
+        <Text style={formStyles.fieldLabel}>Miktar / Porsiyon</Text>
+        <View style={pStyles.portionGrid}>
+          {PORTION_PRESETS.map(p => (
+            <Pressable
+              key={p}
+              style={[pStyles.portionChip, form.portion === p && pStyles.portionChipActive]}
+              onPress={() => set("portion", p)}
+            >
+              <Text style={[pStyles.portionChipText, form.portion === p && pStyles.portionChipTextActive]}>{p}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <TextInput
+          style={[formStyles.fieldInput, { marginTop: 8 }]}
+          value={form.portion}
+          onChangeText={v => set("portion", v)}
+          placeholder="Veya özel girin: 2.5 kg, 5 porsiyon..."
+          placeholderTextColor={Colors.light.textMuted}
+        />
+      </View>
+
       <FormField label="Günlük Stok" value={form.dailyStock} onChange={v => set("dailyStock", v)} placeholder="10" keyboardType="numeric" />
       <FormField label="Hazırlama Süresi (dk)" value={form.prepTime} onChange={v => set("prepTime", v)} placeholder="30" keyboardType="numeric" />
 
@@ -935,6 +964,14 @@ const pStyles = StyleSheet.create({
   imagePlaceholderText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textMuted },
   removeImage: { alignSelf: "flex-end", marginBottom: 12 },
   removeImageText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.light.accent },
+  portionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 },
+  portionChip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+    backgroundColor: Colors.light.backgroundSecondary, borderWidth: 1, borderColor: Colors.light.border,
+  },
+  portionChipActive: { backgroundColor: Colors.light.primary + "18", borderColor: Colors.light.primary },
+  portionChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary },
+  portionChipTextActive: { color: Colors.light.primary, fontFamily: "Inter_600SemiBold" },
   categoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
   catChip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
