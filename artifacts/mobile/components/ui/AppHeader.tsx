@@ -22,7 +22,7 @@ export function AppHeader({ onCategoryPress, categoryActive = false }: AppHeader
     <View style={[styles.header, { paddingTop: topInset + 6, paddingBottom: 10 }]}>
 
       {/* Marka Adı + Slogan — sola hizalı, ikisi kendi içinde ortalı */}
-      <Pressable onPress={() => router.replace("/(tabs)")} style={styles.brandWrap} hitSlop={8}>
+      <View style={styles.brandWrap}>
         <View style={styles.brandInner}>
           <Text style={styles.brandName}>HanımEli</Text>
           <View style={styles.sloganRow}>
@@ -31,7 +31,7 @@ export function AppHeader({ onCategoryPress, categoryActive = false }: AppHeader
             <Text style={styles.leaf}>🌿</Text>
           </View>
         </View>
-      </Pressable>
+      </View>
 
       {/* Eylem ikonları */}
       <View style={styles.actions}>
