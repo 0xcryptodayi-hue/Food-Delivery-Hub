@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useGetOrders } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
+import { AppHeader } from "@/components/ui/AppHeader";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: string }> = {
   received: { label: "Alındı", color: "#3B82F6", icon: "check-circle" },
@@ -85,7 +86,8 @@ export default function OrdersScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.container, styles.centered, { paddingTop: topInset }]}>
+      <View style={[styles.container, styles.centered]}>
+        <AppHeader />
         <Feather name="shopping-bag" size={48} color={Colors.light.textMuted} />
         <Text style={styles.emptyTitle}>Giriş yapın</Text>
         <Text style={styles.emptyText}>Siparişlerinizi görmek için giriş yapın</Text>
@@ -97,7 +99,8 @@ export default function OrdersScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: topInset }]}>
+    <View style={styles.container}>
+      <AppHeader />
       <Text style={styles.title}>Siparişler</Text>
 
       {user.isSeller && (

@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useGetProducts, useGetFavorites, useToggleFavorite, getGetFavoritesQueryKey } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/ui/ProductCard";
+import { AppHeader } from "@/components/ui/AppHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -211,53 +212,10 @@ export default function HomeScreen() {
     <View style={styles.container}>
 
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: topInset + 6, paddingBottom: 8 }]}>
-
-        {/* Orta: Marka Adı + Slogan */}
-        <View style={styles.headerBrand}>
-          <Text style={styles.headerBrandName}>HanımEli</Text>
-          <View style={styles.headerSlogan}>
-            <Text style={styles.headerLeaf}>🌿</Text>
-            <Text style={styles.headerSloganText}>Ev Yapımı Lezzetler</Text>
-            <Text style={styles.headerLeaf}>🌿</Text>
-          </View>
-        </View>
-
-        {/* Sağ: Eylem Butonları */}
-        <View style={styles.headerActions}>
-          <Pressable
-            style={styles.headerIconBtn}
-            onPress={() => user ? router.push("/notifications") : router.push("/auth")}
-          >
-            <Feather name="bell" size={20} color={Colors.light.primaryDark} />
-          </Pressable>
-
-          <Pressable style={styles.headerIconBtn} onPress={() => router.push("/cart")}>
-            <Feather
-              name="shopping-cart"
-              size={20}
-              color={itemCount > 0 ? Colors.light.primary : Colors.light.primaryDark}
-            />
-            {itemCount > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{itemCount > 9 ? "9+" : itemCount}</Text>
-              </View>
-            )}
-          </Pressable>
-
-          <Pressable
-            style={[styles.headerIconBtn, selectedCategory !== "all" && styles.headerIconBtnActive]}
-            onPress={() => setShowCategories(true)}
-          >
-            <Feather
-              name="grid"
-              size={20}
-              color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.primaryDark}
-            />
-            {selectedCategory !== "all" && <View style={styles.activeDot} />}
-          </Pressable>
-        </View>
-      </View>
+      <AppHeader
+        onCategoryPress={() => setShowCategories(true)}
+        categoryActive={selectedCategory !== "all"}
+      />
 
       {/* ── Arama Barı (header altında) ── */}
       <View style={styles.searchBarWrap}>
@@ -361,48 +319,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
 
-  /* Header */
-  header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 14,
-    backgroundColor: "#FEF3E2",
-    borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
-    ...Platform.select({
-      ios: { shadowColor: "rgba(180,80,10,0.18)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 10 },
-      android: { elevation: 5 },
-      web: { boxShadow: "0 3px 12px rgba(180,80,10,0.13)" },
-    }),
-  },
-
-  /* Brand */
-  headerBrand: {
-    flex: 1,
-    alignItems: "flex-start",
-    justifyContent: "center",
-    paddingLeft: 2,
-  },
-  headerBrandName: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    color: "#C4521A",
-    letterSpacing: 0.4,
-    lineHeight: 28,
-  },
-  headerSlogan: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 2,
-  },
-  headerSloganText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: "#4A7C59",
-    letterSpacing: 0.2,
-  },
-  headerLeaf: {
-    fontSize: 12,
-  },
 
   /* Search bar (below header) */
   searchBarWrap: {
