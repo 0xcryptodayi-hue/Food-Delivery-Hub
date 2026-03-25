@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, TextInput,
-  ScrollView, RefreshControl, Platform,
+  RefreshControl, Platform, Modal, Animated, ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -14,13 +14,13 @@ import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
 
 const CATEGORIES = [
-  { slug: "all", name: "Tümü", icon: "🏠" },
-  { slug: "main-dish", name: "Ana Yemek", icon: "🍛" },
-  { slug: "soup", name: "Çorba", icon: "🥣" },
-  { slug: "dessert", name: "Tatlı", icon: "🍮" },
-  { slug: "breakfast", name: "Kahvaltı", icon: "🥞" },
-  { slug: "salad", name: "Salata", icon: "🥗" },
-  { slug: "pastry", name: "Börek", icon: "🥐" },
+  { slug: "all",        name: "Tümü",       icon: "🏠", color: "#E8F5E9", accent: "#43A047" },
+  { slug: "main-dish",  name: "Ana Yemek",  icon: "🍛", color: "#FFF3E0", accent: "#F57C00" },
+  { slug: "soup",       name: "Çorba",      icon: "🥣", color: "#FFEBEE", accent: "#E53935" },
+  { slug: "dessert",    name: "Tatlı",      icon: "🍮", color: "#FFF8E1", accent: "#F9A825" },
+  { slug: "breakfast",  name: "Kahvaltı",   icon: "🥞", color: "#F3E5F5", accent: "#8E24AA" },
+  { slug: "salad",      name: "Salata",     icon: "🥗", color: "#E0F2F1", accent: "#00897B" },
+  { slug: "pastry",     name: "Börek",      icon: "🥐", color: "#EDE7F6", accent: "#5E35B1" },
 ];
 
 type Product = {
@@ -40,6 +40,88 @@ type Product = {
   sellerId: number;
 };
 
+function CategoryModal({
+  visible,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selected: string;
+  onSelect: (slug: string) => void;
+  onClose: () => void;
+}) {
+  const slideAnim = useRef(new Animated.Value(400)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 400, duration: 220, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  return (
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Animated.View style={[styles.backdrop, { opacity: backdropAnim }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.sheet,
+          { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 16 },
+          { transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        <View style={styles.sheetHandle} />
+
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Kategoriler</Text>
+          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={8}>
+            <Feather name="x" size={18} color={Colors.light.textSecondary} />
+          </Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.categoryGrid}>
+          {CATEGORIES.map(cat => {
+            const isActive = selected === cat.slug;
+            return (
+              <Pressable
+                key={cat.slug}
+                style={({ pressed }) => [
+                  styles.categoryCard,
+                  { backgroundColor: isActive ? cat.accent : cat.color },
+                  pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
+                ]}
+                onPress={() => { onSelect(cat.slug); onClose(); }}
+              >
+                <Text style={styles.categoryCardEmoji}>{cat.icon}</Text>
+                <Text style={[styles.categoryCardName, { color: isActive ? "#fff" : cat.accent }]}>
+                  {cat.name}
+                </Text>
+                {isActive && (
+                  <View style={styles.categoryCardCheck}>
+                    <Feather name="check" size={12} color="#fff" />
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </Animated.View>
+    </Modal>
+  );
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -48,6 +130,7 @@ export default function HomeScreen() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
 
   const { data, isLoading, refetch } = useGetProducts({
     search: search || undefined,
@@ -59,8 +142,9 @@ export default function HomeScreen() {
   const toggleFav = useToggleFavorite();
 
   const favoriteIds = new Set((favorites ?? []).map((f: { id: number }) => f.id));
-
   const products = (data?.products ?? []) as Product[];
+
+  const activeCat = CATEGORIES.find(c => c.slug === selectedCategory) ?? CATEGORIES[0];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -92,6 +176,8 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
+
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.greeting}>
@@ -106,11 +192,12 @@ export default function HomeScreen() {
           >
             <Feather name="bell" size={20} color={Colors.light.text} />
           </Pressable>
-          <Pressable
-            style={styles.cartBtn}
-            onPress={() => router.push("/cart")}
-          >
-            <Feather name="shopping-cart" size={20} color={itemCount > 0 ? Colors.light.primary : Colors.light.text} />
+          <Pressable style={styles.cartBtn} onPress={() => router.push("/cart")}>
+            <Feather
+              name="shopping-cart"
+              size={20}
+              color={itemCount > 0 ? Colors.light.primary : Colors.light.text}
+            />
             {itemCount > 0 && (
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{itemCount > 9 ? "9+" : itemCount}</Text>
@@ -120,6 +207,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* ── Search + Categories button ── */}
       <View style={styles.searchRow}>
         <View style={styles.searchContainer}>
           <Feather name="search" size={16} color={Colors.light.textMuted} />
@@ -137,33 +225,35 @@ export default function HomeScreen() {
             </Pressable>
           )}
         </View>
+        <Pressable
+          style={({ pressed }) => [styles.catButton, pressed && { opacity: 0.85 }]}
+          onPress={() => setShowCategories(true)}
+        >
+          <Feather name="sliders" size={16} color="#fff" />
+          <Text style={styles.catButtonText}>Kategori</Text>
+        </Pressable>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryScroll}
-        contentContainerStyle={styles.categoryContent}
-      >
-        {CATEGORIES.map(cat => (
-          <Pressable
-            key={cat.slug}
-            style={[styles.categoryChip, selectedCategory === cat.slug && styles.categoryChipActive]}
-            onPress={() => setSelectedCategory(cat.slug)}
-          >
-            <Text style={styles.categoryIcon}>{cat.icon}</Text>
-            <Text style={[styles.categoryText, selectedCategory === cat.slug && styles.categoryTextActive]}>
-              {cat.name}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {/* ── Active filter pill ── */}
+      {selectedCategory !== "all" && (
+        <View style={styles.filterRow}>
+          <View style={[styles.activePill, { backgroundColor: activeCat!.accent }]}>
+            <Text style={styles.activePillEmoji}>{activeCat!.icon}</Text>
+            <Text style={styles.activePillText}>{activeCat!.name}</Text>
+            <Pressable onPress={() => setSelectedCategory("all")} hitSlop={6} style={styles.pillClose}>
+              <Feather name="x" size={13} color="#fff" />
+            </Pressable>
+          </View>
+          <Text style={styles.filterCount}>
+            {isLoading ? "..." : `${products.length} sonuç`}
+          </Text>
+        </View>
+      )}
 
+      {/* ── Product list ── */}
       {isLoading && products.length === 0 ? (
         <View style={styles.skeletonContainer}>
-          {[1, 2].map(i => (
-            <View key={i} style={styles.skeletonCard} />
-          ))}
+          {[1, 2].map(i => <View key={i} style={styles.skeletonCard} />)}
         </View>
       ) : (
         <FlatList
@@ -188,31 +278,46 @@ export default function HomeScreen() {
               colors={[Colors.light.primary]}
             />
           }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🍽️</Text>
-              <Text style={styles.emptyTitle}>Yemek bulunamadı</Text>
-              <Text style={styles.emptyText}>Farklı bir kategori veya arama deneyin</Text>
-            </View>
-          }
           ListHeaderComponent={
             products.length > 0 ? (
               <View style={styles.listHeader}>
                 <Text style={styles.resultCount}>
-                  {selectedCategory === "all" ? "Tüm Yemekler" : CATEGORIES.find(c => c.slug === selectedCategory)?.name}
+                  {selectedCategory === "all" ? "Tüm Yemekler" : activeCat?.name}
                 </Text>
                 <Text style={styles.resultCountSub}>{products.length} seçenek</Text>
               </View>
             ) : null
           }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyIcon}>🍽️</Text>
+              <Text style={styles.emptyTitle}>Yemek bulunamadı</Text>
+              <Text style={styles.emptyText}>Farklı bir kategori veya arama deneyin</Text>
+              {selectedCategory !== "all" && (
+                <Pressable style={styles.clearFilterBtn} onPress={() => setSelectedCategory("all")}>
+                  <Text style={styles.clearFilterBtnText}>Filtreyi Temizle</Text>
+                </Pressable>
+              )}
+            </View>
+          }
         />
       )}
+
+      {/* ── Category bottom sheet ── */}
+      <CategoryModal
+        visible={showCategories}
+        selected={selectedCategory}
+        onSelect={setSelectedCategory}
+        onClose={() => setShowCategories(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
+
+  /* Header */
   header: {
     flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between",
     paddingHorizontal: 20, paddingBottom: 14,
@@ -243,26 +348,46 @@ const styles = StyleSheet.create({
     minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
   },
   cartBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
-  searchRow: { paddingHorizontal: 20, marginBottom: 14 },
+
+  /* Search + Category button */
+  searchRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, marginBottom: 10, alignItems: "center" },
   searchContainer: {
-    flexDirection: "row", alignItems: "center", gap: 10,
+    flex: 1, flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: Colors.light.surface, borderRadius: 16,
     paddingHorizontal: 16, height: 48,
     borderWidth: 1, borderColor: Colors.light.borderLight,
   },
   searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text },
-  categoryScroll: { maxHeight: 52, marginBottom: 12 },
-  categoryContent: { paddingHorizontal: 20, gap: 8, alignItems: "center" },
-  categoryChip: {
+  catButton: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 24,
-    backgroundColor: Colors.light.surface,
-    borderWidth: 1, borderColor: Colors.light.borderLight,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 16, paddingHorizontal: 14, height: 48,
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
   },
-  categoryChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
-  categoryIcon: { fontSize: 16 },
-  categoryText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary },
-  categoryTextActive: { color: "#fff" },
+  catButtonText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+
+  /* Active filter pill */
+  filterRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, marginBottom: 10,
+  },
+  activePill: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderRadius: 20, paddingVertical: 6, paddingLeft: 10, paddingRight: 8,
+  },
+  activePillEmoji: { fontSize: 15 },
+  activePillText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  pillClose: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    alignItems: "center", justifyContent: "center", marginLeft: 2,
+  },
+  filterCount: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+
+  /* List */
   listContent: { paddingHorizontal: 20, paddingTop: 4 },
   listHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   resultCount: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.light.text },
@@ -273,4 +398,60 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 72 },
   emptyTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, textAlign: "center" },
+  clearFilterBtn: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: Colors.light.primary, borderRadius: 14 },
+  clearFilterBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 },
+
+  /* Bottom sheet */
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    zIndex: 10,
+  },
+  sheet: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    backgroundColor: Colors.light.background,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingTop: 12, zIndex: 11,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 20 },
+      android: { elevation: 20 },
+    }),
+  },
+  sheetHandle: {
+    alignSelf: "center", width: 40, height: 4,
+    borderRadius: 2, backgroundColor: Colors.light.border, marginBottom: 16,
+  },
+  sheetHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 24, marginBottom: 20,
+  },
+  sheetTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  closeBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: Colors.light.backgroundSecondary,
+    alignItems: "center", justifyContent: "center",
+  },
+  categoryGrid: {
+    flexDirection: "row", flexWrap: "wrap", gap: 12,
+    paddingHorizontal: 20, paddingBottom: 12,
+  },
+  categoryCard: {
+    width: "30%", flexGrow: 1,
+    alignItems: "center", justifyContent: "center",
+    paddingVertical: 20, borderRadius: 18, gap: 8,
+    position: "relative",
+    minWidth: 90,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6 },
+      android: { elevation: 2 },
+    }),
+  },
+  categoryCardEmoji: { fontSize: 32 },
+  categoryCardName: { fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  categoryCardCheck: {
+    position: "absolute", top: 8, right: 8,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.35)",
+    alignItems: "center", justifyContent: "center",
+  },
 });
