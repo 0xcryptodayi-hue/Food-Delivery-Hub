@@ -86,9 +86,6 @@ function VitrinSection({
             <Feather name="zap" size={14} color="#fff" />
           </View>
           <Text style={vitrinStyles.sectionTitle}>Öne Çıkanlar</Text>
-          <View style={vitrinStyles.sponsorBadge}>
-            <Text style={vitrinStyles.sponsorBadgeText}>Sponsorlu</Text>
-          </View>
         </View>
         {isSeller && (
           <Text style={vitrinStyles.sectionSub}>Öne çıkmak için reklam verin →</Text>
@@ -307,9 +304,6 @@ function BestSellersSection({ products, onProductPress }: { products: BestSeller
             <Text style={{ fontSize: 13 }}>🔥</Text>
           </View>
           <Text style={bsStyles.sectionTitle}>En Çok Satanlar</Text>
-          <View style={bsStyles.freeBadge}>
-            <Text style={bsStyles.freeBadgeText}>Ücretsiz</Text>
-          </View>
         </View>
       </View>
       <ScrollView
