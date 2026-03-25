@@ -211,47 +211,40 @@ export default function HomeScreen() {
     <View style={styles.container}>
 
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: topInset + 8, paddingBottom: 10 }]}>
-        {/* Logo — çember kırpılmış, sadece iç içerik görünür */}
-        <View style={styles.headerLogoContainer}>
+      <View style={[styles.header, { paddingTop: topInset + 6, paddingBottom: 8 }]}>
+
+        {/* Sol: Logo */}
+        <View style={styles.headerLogoWrap}>
           <Image
-            source={require("@/assets/images/logo.png")}
+            source={require("@/assets/images/logo_new.png")}
             style={styles.headerLogo}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         </View>
 
-        {/* Arama — header içinde */}
-        <View style={styles.headerSearch}>
-          <Feather name="search" size={15} color={Colors.light.textMuted} />
-          <TextInput
-            style={styles.headerSearchInput}
-            placeholder="Yemek veya satıcı ara..."
-            placeholderTextColor={Colors.light.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")} hitSlop={10}>
-              <Feather name="x-circle" size={15} color={Colors.light.textMuted} />
-            </Pressable>
-          )}
+        {/* Orta: Marka Adı + Slogan */}
+        <View style={styles.headerBrand}>
+          <Text style={styles.headerBrandName}>HanımEli</Text>
+          <View style={styles.headerSlogan}>
+            <Text style={styles.headerLeaf}>🌿</Text>
+            <Text style={styles.headerSloganText}>Ev Yapımı Lezzetler</Text>
+            <Text style={styles.headerLeaf}>🌿</Text>
+          </View>
         </View>
 
-        {/* Eylem Butonları */}
+        {/* Sağ: Eylem Butonları */}
         <View style={styles.headerActions}>
           <Pressable
             style={styles.headerIconBtn}
             onPress={() => user ? router.push("/notifications") : router.push("/auth")}
           >
-            <Feather name="bell" size={19} color={Colors.light.primaryDark} />
+            <Feather name="bell" size={20} color={Colors.light.primaryDark} />
           </Pressable>
 
           <Pressable style={styles.headerIconBtn} onPress={() => router.push("/cart")}>
             <Feather
               name="shopping-cart"
-              size={19}
+              size={20}
               color={itemCount > 0 ? Colors.light.primary : Colors.light.primaryDark}
             />
             {itemCount > 0 && (
@@ -267,11 +260,31 @@ export default function HomeScreen() {
           >
             <Feather
               name="grid"
-              size={19}
+              size={20}
               color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.primaryDark}
             />
             {selectedCategory !== "all" && <View style={styles.activeDot} />}
           </Pressable>
+        </View>
+      </View>
+
+      {/* ── Arama Barı (header altında) ── */}
+      <View style={styles.searchBarWrap}>
+        <View style={styles.searchBar}>
+          <Feather name="search" size={16} color={Colors.light.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Yemek veya satıcı ara..."
+            placeholderTextColor={Colors.light.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")} hitSlop={10}>
+              <Feather name="x-circle" size={15} color={Colors.light.textMuted} />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -360,38 +373,81 @@ const styles = StyleSheet.create({
   /* Header */
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16,
-    backgroundColor: "#FCF1D5",
-    borderBottomWidth: 1, borderBottomColor: "#E5CFA0",
+    paddingHorizontal: 14,
+    backgroundColor: "#FEF3E2",
+    borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
     ...Platform.select({
-      ios: { shadowColor: "rgba(140,100,20,0.15)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
-      android: { elevation: 4 },
-      web: { boxShadow: "0 3px 10px rgba(140,100,20,0.12)" },
+      ios: { shadowColor: "rgba(180,80,10,0.18)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 10 },
+      android: { elevation: 5 },
+      web: { boxShadow: "0 3px 12px rgba(180,80,10,0.13)" },
     }),
   },
-  headerLogoContainer: {
-    width: 46, height: 46,
-    overflow: "hidden",
-    borderRadius: 8,
+
+  /* Logo */
+  headerLogoWrap: {
+    width: 54, height: 54,
+    alignItems: "center", justifyContent: "center",
   },
-  headerLogo: { width: 60, height: 60, marginLeft: -7, marginTop: -7 },
-  headerSearch: {
+  headerLogo: { width: 54, height: 54 },
+
+  /* Brand */
+  headerBrand: {
     flex: 1,
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    borderRadius: 14, height: 42,
-    paddingHorizontal: 12,
-    marginHorizontal: 10,
-    borderWidth: 1, borderColor: "rgba(232,101,26,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
   },
-  headerSearchInput: {
+  headerBrandName: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: "#C4521A",
+    letterSpacing: 0.6,
+  },
+  headerSlogan: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 1,
+  },
+  headerSloganText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: "#4A7C59",
+    letterSpacing: 0.3,
+  },
+  headerLeaf: {
+    fontSize: 11,
+  },
+
+  /* Search bar (below header) */
+  searchBarWrap: {
+    backgroundColor: "#FEF3E2",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0D9B5",
+  },
+  searchBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16, height: 44,
+    paddingHorizontal: 14,
+    borderWidth: 1.5, borderColor: "rgba(196,82,26,0.18)",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(180,80,10,0.12)", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6 },
+      android: { elevation: 2 },
+      web: { boxShadow: "0 2px 8px rgba(180,80,10,0.08)" },
+    }),
+  },
+  searchInput: {
     flex: 1, fontFamily: "Inter_400Regular",
     fontSize: 14, color: Colors.light.text,
   },
-  headerActions: { flexDirection: "row", gap: 4, alignItems: "center" },
+
+  headerActions: { flexDirection: "row", gap: 2, alignItems: "center" },
   headerIconBtn: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.65)",
     alignItems: "center", justifyContent: "center",
   },
   headerIconBtnActive: {
