@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, TextInput,
-  RefreshControl, Platform, Modal, Animated, ScrollView,
+  RefreshControl, Platform, Modal, Animated, ScrollView, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -212,12 +212,11 @@ export default function HomeScreen() {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>
-            {user ? `Merhaba, ${user.name.split(" ")[0]}! 👋` : "Merhaba! 👋"}
-          </Text>
-          <Text style={styles.subtitle}>Bugün ne yemek istersiniz?</Text>
-        </View>
+        <Image
+          source={require("@/assets/images/logo.png")}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
         <View style={styles.headerActions}>
           {/* Bildirim */}
           <Pressable
@@ -360,13 +359,11 @@ const styles = StyleSheet.create({
 
   /* Header */
   header: {
-    flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingBottom: 14,
   },
-  headerLeft: { flex: 1 },
+  headerLogo: { width: 150, height: 60 },
   headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
-  greeting: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.light.text },
-  subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, marginTop: 2 },
   iconBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: Colors.light.surface,
