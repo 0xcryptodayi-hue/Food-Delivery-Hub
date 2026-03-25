@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
       web: { boxShadow: "0 3px 10px rgba(180,80,10,0.10)" },
     }),
   },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#C4521A" },
 
   profileCard: {
     flexDirection: "row", alignItems: "center", gap: 14,

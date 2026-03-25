@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
       web: { boxShadow: "0 3px 10px rgba(180,80,10,0.10)" },
     }),
   },
-  pageTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.light.text, letterSpacing: -0.3 },
+  pageTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#C4521A", letterSpacing: -0.3 },
   pageSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
   refreshBtn: {
     width: 36, height: 36, borderRadius: 18,

@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
       web: { boxShadow: "0 3px 10px rgba(180,80,10,0.10)" },
     }),
   },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#C4521A" },
   convItem: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14, gap: 14 },
   avatar: { position: "relative" },
   avatarImage: { width: 52, height: 52, borderRadius: 26 },
