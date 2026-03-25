@@ -1,25 +1,62 @@
 import React from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, Platform } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetFavorites, useToggleFavorite } from "@workspace/api-client-react";
+import { useGetFavorites, useToggleFavorite, getGetFavoritesQueryKey } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function FavoritesScreen() {
   const insets = useSafeAreaInsets();
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  const { data: favorites, isLoading, refetch } = useGetFavorites();
+  const { data: favorites, isLoading, refetch } = useGetFavorites({
+    query: { enabled: !!user },
+  });
   const toggleFav = useToggleFavorite();
 
-  const handleUnfavorite = async (productId: number) => {
-    await toggleFav.mutateAsync({ data: { productId } });
-    refetch();
+  const handleUnfavorite = (productId: number) => {
+    toggleFav.mutate(
+      { data: { productId } },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() }) }
+    );
   };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  if (!user) {
+    return (
+      <View style={[styles.container, { paddingTop: topInset }]}>
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Feather name="arrow-left" size={20} color={Colors.light.text} />
+          </Pressable>
+          <Text style={styles.title}>Favorilerim</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={styles.empty}>
+          <Text style={styles.emptyEmoji}>❤️</Text>
+          <Text style={styles.emptyTitle}>Giriş yapmanız gerekiyor</Text>
+          <Text style={styles.emptyText}>Favorilerinizi görmek için giriş yapın</Text>
+          <Pressable style={styles.browseBtn} onPress={() => router.push("/auth")}>
+            <Text style={styles.browseBtnText}>Giriş Yap</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
@@ -53,6 +90,14 @@ export default function FavoritesScreen() {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.light.primary}
+              colors={[Colors.light.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>❤️</Text>

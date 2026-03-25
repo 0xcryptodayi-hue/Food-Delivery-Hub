@@ -7,20 +7,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetProduct, useToggleFavorite } from "@workspace/api-client-react";
+import { useGetProduct, useToggleFavorite, getGetFavoritesQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { addItem, items } = useCart();
+  const queryClient = useQueryClient();
   const [qty, setQty] = useState(1);
+  const [localFavorited, setLocalFavorited] = useState<boolean | null>(null);
 
   const { data: product, isLoading } = useGetProduct(parseInt(id ?? "0"));
   const toggleFav = useToggleFavorite();
 
+  const isFavorited = localFavorited !== null ? localFavorited : (product?.isFavorited ?? false);
   const cartQty = items.find(i => i.productId === parseInt(id ?? "0"))?.quantity ?? 0;
 
   const handleAddToCart = () => {
@@ -38,7 +42,14 @@ export default function ProductDetailScreen() {
   const handleFavorite = () => {
     if (!user) { router.push("/auth"); return; }
     if (!product) return;
-    toggleFav.mutate({ data: { productId: product.id } });
+    setLocalFavorited(!isFavorited);
+    toggleFav.mutate(
+      { data: { productId: product.id } },
+      {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() }),
+        onError: () => setLocalFavorited(isFavorited),
+      }
+    );
   };
 
   if (isLoading) {
@@ -76,7 +87,7 @@ export default function ProductDetailScreen() {
               <Feather name="arrow-left" size={20} color={Colors.light.text} />
             </Pressable>
             <Pressable style={styles.iconBtn} onPress={handleFavorite}>
-              <Ionicons name={product.isFavorited ? "heart" : "heart-outline"} size={20} color={product.isFavorited ? Colors.light.accent : Colors.light.text} />
+              <Ionicons name={isFavorited ? "heart" : "heart-outline"} size={20} color={isFavorited ? Colors.light.accent : Colors.light.text} />
             </Pressable>
           </View>
           {product.isSponsored && (

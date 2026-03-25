@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetProducts, useGetFavorites, useToggleFavorite } from "@workspace/api-client-react";
+import { useGetProducts, useGetFavorites, useToggleFavorite, getGetFavoritesQueryKey } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -83,7 +83,7 @@ export default function HomeScreen() {
     if (!user) { router.push("/auth"); return; }
     toggleFav.mutate(
       { data: { productId: product.id } },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["favorites"] }) }
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() }) }
     );
   };
 
@@ -108,7 +108,7 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable
             style={styles.cartBtn}
-            onPress={() => user ? router.push("/checkout") : router.push("/auth")}
+            onPress={() => router.push("/cart")}
           >
             <Feather name="shopping-cart" size={20} color={itemCount > 0 ? Colors.light.primary : Colors.light.text} />
             {itemCount > 0 && (
