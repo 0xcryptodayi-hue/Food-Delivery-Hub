@@ -14,7 +14,7 @@ const STATUS_META: Record<string, {
   label: string; color: string; bg: string;
   icon: string; step: number; accent: string;
 }> = {
-  received:   { label: "Alındı",        color: "#2563EB", bg: "#EFF6FF", accent: "#BFDBFE", icon: "check-circle", step: 1 },
+  received:   { label: "Alındı",        color: "#E8651A", bg: "#FFF7ED", accent: "#FED7AA", icon: "check-circle", step: 1 },
   preparing:  { label: "Hazırlanıyor",  color: "#D97706", bg: "#FFFBEB", accent: "#FDE68A", icon: "loader",       step: 2 },
   ready:      { label: "Hazır",         color: "#059669", bg: "#ECFDF5", accent: "#A7F3D0", icon: "package",      step: 3 },
   on_the_way: { label: "Yolda",         color: "#E8651A", bg: "#FFF7ED", accent: "#FED7AA", icon: "truck",        step: 4 },
