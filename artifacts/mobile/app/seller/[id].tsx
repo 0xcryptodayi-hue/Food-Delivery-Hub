@@ -268,7 +268,7 @@ export default function SellerScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
-      <Pressable style={[styles.backBtn, { position: "absolute", zIndex: 10, top: 12, left: 16 }]} onPress={() => router.back()}>
+      <Pressable style={[styles.backBtn, { position: "absolute", zIndex: 10, top: topInset + 12, left: 16 }]} onPress={() => router.back()}>
         <Feather name="arrow-left" size={20} color={Colors.light.text} />
       </Pressable>
       <ScrollView
