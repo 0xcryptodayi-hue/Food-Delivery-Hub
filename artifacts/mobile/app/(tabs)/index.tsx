@@ -212,24 +212,32 @@ export default function HomeScreen() {
 
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: topInset + 8, paddingBottom: 10 }]}>
-        {/* Logo */}
-        <Image
-          source={require("@/assets/images/logo.png")}
-          style={styles.headerLogo}
-          resizeMode="contain"
-        />
+        {/* Logo — çember kırpılmış, sadece iç içerik görünür */}
+        <View style={styles.headerLogoContainer}>
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.headerLogo}
+            resizeMode="cover"
+          />
+        </View>
 
-        {/* Konum Seçici */}
-        <Pressable style={styles.locationPill} onPress={() => {}}>
-          <Feather name="map-pin" size={13} color={Colors.light.primary} />
-          <View style={styles.locationText}>
-            <Text style={styles.locationLabel}>Teslimat Adresi</Text>
-            <Text style={styles.locationValue} numberOfLines={1}>
-              İstanbul, Türkiye
-            </Text>
-          </View>
-          <Feather name="chevron-down" size={14} color={Colors.light.primaryDark} />
-        </Pressable>
+        {/* Arama — header içinde */}
+        <View style={styles.headerSearch}>
+          <Feather name="search" size={15} color={Colors.light.textMuted} />
+          <TextInput
+            style={styles.headerSearchInput}
+            placeholder="Yemek veya satıcı ara..."
+            placeholderTextColor={Colors.light.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")} hitSlop={10}>
+              <Feather name="x-circle" size={15} color={Colors.light.textMuted} />
+            </Pressable>
+          )}
+        </View>
 
         {/* Eylem Butonları */}
         <View style={styles.headerActions}>
@@ -264,26 +272,6 @@ export default function HomeScreen() {
             />
             {selectedCategory !== "all" && <View style={styles.activeDot} />}
           </Pressable>
-        </View>
-      </View>
-
-      {/* ── Search ── */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={16} color={Colors.light.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Yemek veya satıcı ara..."
-            placeholderTextColor={Colors.light.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")} hitSlop={10}>
-              <Feather name="x-circle" size={16} color={Colors.light.textMuted} />
-            </Pressable>
-          )}
         </View>
       </View>
 
@@ -381,24 +369,24 @@ const styles = StyleSheet.create({
       web: { boxShadow: "0 3px 10px rgba(140,100,20,0.12)" },
     }),
   },
-  headerLogo: { width: 52, height: 52 },
-  locationPill: {
+  headerLogoContainer: {
+    width: 46, height: 46,
+    overflow: "hidden",
+    borderRadius: 8,
+  },
+  headerLogo: { width: 60, height: 60, marginLeft: -7, marginTop: -7 },
+  headerSearch: {
     flex: 1,
-    flexDirection: "row", alignItems: "center", gap: 6,
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 14, height: 42,
+    paddingHorizontal: 12,
     marginHorizontal: 10,
-    backgroundColor: "rgba(255,255,255,0.6)",
-    borderRadius: 14,
-    paddingHorizontal: 10, paddingVertical: 7,
-    borderWidth: 1, borderColor: "rgba(232,101,26,0.18)",
+    borderWidth: 1, borderColor: "rgba(232,101,26,0.15)",
   },
-  locationText: { flex: 1 },
-  locationLabel: {
-    fontSize: 10, fontFamily: "Inter_500Medium",
-    color: Colors.light.textMuted, letterSpacing: 0.3,
-  },
-  locationValue: {
-    fontSize: 13, fontFamily: "Inter_700Bold",
-    color: Colors.light.text, marginTop: 1,
+  headerSearchInput: {
+    flex: 1, fontFamily: "Inter_400Regular",
+    fontSize: 14, color: Colors.light.text,
   },
   headerActions: { flexDirection: "row", gap: 4, alignItems: "center" },
   headerIconBtn: {
@@ -421,15 +409,6 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
 
-  /* Search */
-  searchRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, marginBottom: 10, alignItems: "center" },
-  searchContainer: {
-    flex: 1, flexDirection: "row", alignItems: "center", gap: 10,
-    backgroundColor: Colors.light.surface, borderRadius: 16,
-    paddingHorizontal: 16, height: 48,
-    borderWidth: 1, borderColor: Colors.light.borderLight,
-  },
-  searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text },
 
   /* Active filter pill */
   filterRow: {
