@@ -109,14 +109,14 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { paddingTop: topInset }]}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 80 }}
-    >
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Profil</Text>
       </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 80 }}
+      >
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
@@ -203,7 +203,8 @@ export default function ProfileScreen() {
       </View>
 
       <Text style={styles.version}>Ev Yemekleri Marketplace v1.0</Text>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { alignItems: "center", justifyContent: "center", gap: 16 },
   header: {
-    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16,
+    paddingHorizontal: 16, paddingTop: 6, paddingBottom: 10,
     backgroundColor: "#FEF3E2",
     borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
     marginBottom: 16,

@@ -44,11 +44,7 @@ export default function WalletScreen() {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { paddingTop: topInset }]}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 20 }}
-    >
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={20} color={Colors.light.text} />
@@ -57,6 +53,10 @@ export default function WalletScreen() {
         <View style={{ width: 36 }} />
       </View>
 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 20 }}
+      >
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Kullanılabilir Bakiye</Text>
         <Text style={styles.balanceAmount}>₺{(wallet?.availableBalance ?? 0).toFixed(2)}</Text>
@@ -113,7 +113,8 @@ export default function WalletScreen() {
           })
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.background, gap: 12 },
   errorText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary, textAlign: "center" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 6, paddingBottom: 10 },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.surface, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.text },
   balanceCard: {
