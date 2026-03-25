@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, productsTable, usersTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { db, productsTable, usersTable, hygieneRatingsTable } from "@workspace/db";
+import { eq, and, sql, avg, count } from "drizzle-orm";
 import { optionalAuth, requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const router = Router();
@@ -20,7 +20,18 @@ router.get("/", optionalAuth, async (req: AuthRequest, res) => {
     const withCounts = await Promise.all(sellers.map(async (s) => {
       const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(productsTable)
         .where(and(eq(productsTable.sellerId, s.id), eq(productsTable.isAvailable, true)));
-      return { ...s, distance: null, productCount: Number(countRow?.count ?? 0), isSponsored: false };
+      const [hygieneRow] = await db.select({
+        avgScore: avg(hygieneRatingsTable.score),
+        totalCount: count(hygieneRatingsTable.id),
+      }).from(hygieneRatingsTable).where(eq(hygieneRatingsTable.sellerId, s.id));
+      return {
+        ...s,
+        distance: null,
+        productCount: Number(countRow?.count ?? 0),
+        isSponsored: false,
+        hygieneAvg: hygieneRow?.avgScore ? parseFloat(hygieneRow.avgScore as string) : null,
+        hygieneCount: Number(hygieneRow?.totalCount ?? 0),
+      };
     }));
     res.json(withCounts);
   } catch (err) {

@@ -303,14 +303,22 @@ export default function SellerScreen() {
               <Feather name="chevron-down" size={10} color={Colors.light.textMuted} style={{ marginTop: 2 }} />
             </Pressable>
           )}
-          {hygieneData && hygieneData.avgScore != null && (
+          {hygieneData != null && (
             <View style={[styles.statBox, styles.hygieneBox]}>
               <View style={styles.statTop}>
                 <Feather name="shield" size={14} color="#10B981" />
-                <Text style={[styles.statValue, { color: "#10B981" }]}>{hygieneData.avgScore.toFixed(1)}</Text>
+                {hygieneData.avgScore != null ? (
+                  <Text style={[styles.statValue, { color: "#10B981" }]}>{hygieneData.avgScore.toFixed(1)}</Text>
+                ) : (
+                  <Text style={[styles.statValue, { color: "#10B981", fontSize: 13 }]}>Yeni</Text>
+                )}
               </View>
               <Text style={styles.statLabel}>Hijyen</Text>
-              <Text style={styles.hygieneCount}>{hygieneData.totalCount} değ.</Text>
+              {hygieneData.totalCount > 0 ? (
+                <Text style={styles.hygieneCount}>{hygieneData.totalCount} değ.</Text>
+              ) : (
+                <Text style={styles.hygieneCount}>İlk siz olun</Text>
+              )}
             </View>
           )}
           <Pressable

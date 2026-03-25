@@ -16,6 +16,8 @@ type Seller = {
   distance?: number | null;
   productCount: number;
   isSponsored: boolean;
+  hygieneAvg?: number | null;
+  hygieneCount?: number;
 };
 
 function SellerCard({ seller, onPress }: { seller: Seller; onPress: () => void }) {
@@ -51,6 +53,12 @@ function SellerCard({ seller, onPress }: { seller: Seller; onPress: () => void }
               <Ionicons name="star" size={12} color={Colors.light.star} />
               <Text style={styles.ratingText}>{seller.rating.toFixed(1)}</Text>
               <Text style={styles.reviewCount}>({seller.reviewCount})</Text>
+            </View>
+          )}
+          {seller.hygieneAvg != null && (
+            <View style={styles.hygieneChip}>
+              <Feather name="shield" size={12} color="#10B981" />
+              <Text style={styles.hygieneText}>{seller.hygieneAvg.toFixed(1)}</Text>
             </View>
           )}
           <View style={styles.productChip}>
@@ -141,6 +149,8 @@ const styles = StyleSheet.create({
   ratingChip: { flexDirection: "row", alignItems: "center", gap: 3 },
   ratingText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
   reviewCount: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+  hygieneChip: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#10B98115", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  hygieneText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#10B981" },
   productChip: { flexDirection: "row", alignItems: "center", gap: 4 },
   productCount: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.light.primary },
   skeletonCard: { height: 90, backgroundColor: Colors.light.backgroundSecondary, borderRadius: 16, marginBottom: 10 },

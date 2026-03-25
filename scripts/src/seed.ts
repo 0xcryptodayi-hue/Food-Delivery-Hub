@@ -1,4 +1,4 @@
-import { db, usersTable, productsTable, categoriesTable, reviewsTable, ordersTable, walletTransactionsTable } from "@workspace/db";
+import { db, usersTable, productsTable, categoriesTable, reviewsTable, ordersTable, walletTransactionsTable, hygieneRatingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -229,6 +229,29 @@ async function seed() {
     });
   }
   console.log("✅ Orders and reviews seeded");
+
+  const hygieneComments = [
+    "Ambalaj çok temiz ve düzgündü, helal olsun!",
+    "Yemekler hijyenik paketlenmişti, memnun kaldım.",
+    "Temizliğe çok önem veriyor, güven verici.",
+    "Tek kullanımlık kaplar kullanılmış, süper.",
+    "Gıda güvenliği açısından çok titiz.",
+    null, null,
+  ];
+
+  const allOrders = await db.select().from(ordersTable);
+  for (let i = 0; i < Math.min(allOrders.length, 15); i++) {
+    const order = allOrders[i];
+    await db.insert(hygieneRatingsTable).values({
+      sellerId: order.sellerId,
+      buyerId: order.buyerId,
+      orderId: order.id,
+      score: 3.5 + Math.random() * 1.5,
+      comment: hygieneComments[i % hygieneComments.length],
+    }).onConflictDoNothing();
+  }
+  console.log("✅ Hygiene ratings seeded");
+
   console.log("🎉 Seed complete!");
   console.log("Demo accounts (all password: demo123):");
   console.log("  Alıcı  : buyer@demo.com");
