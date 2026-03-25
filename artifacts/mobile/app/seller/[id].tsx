@@ -214,6 +214,7 @@ export default function SellerScreen() {
   const [hygieneComment, setHygieneComment] = useState("");
   const [hygieneSubmitting, setHygieneSubmitting] = useState(false);
   const [hygieneRated, setHygieneRated] = useState(false);
+  const [hygieneCanRate, setHygieneCanRate] = useState<{ canRate: boolean; reason?: string } | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
   const productsY = useRef(0);
@@ -235,6 +236,20 @@ export default function SellerScreen() {
       .then(d => setHygieneData(d))
       .catch(() => {});
   }, [id]);
+
+  useEffect(() => {
+    const sellerId = parseInt(id ?? "0");
+    if (!sellerId || !user || !token) return;
+    fetch(`${getBaseUrl()}/api/hygiene/can-rate/${sellerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => {
+        setHygieneCanRate(d);
+        if (d.reason === "already_rated") setHygieneRated(true);
+      })
+      .catch(() => {});
+  }, [id, user, token]);
   const createConv = useCreateConversation();
 
   const reviews = (reviewsRaw ?? []) as Review[];
@@ -352,11 +367,21 @@ export default function SellerScreen() {
           )}
           {hygieneData != null && (
             <Pressable
-              style={({ pressed }) => [styles.statBox, styles.hygieneBox, pressed && styles.statBoxPressed]}
+              style={({ pressed }) => [
+                styles.statBox, styles.hygieneBox,
+                pressed && hygieneCanRate?.canRate && styles.statBoxPressed,
+              ]}
               onPress={() => {
                 if (!user) { router.push("/auth"); return; }
-                if (hygieneRated) {
-                  Alert.alert("Zaten Değerlendirildi", "Bu satıcı için hijyen değerlendirmesi yaptınız.");
+                if (hygieneRated || hygieneCanRate?.reason === "already_rated") {
+                  Alert.alert("Zaten Değerlendirildi", "Bu satıcı için daha önce hijyen değerlendirmesi yaptınız.");
+                  return;
+                }
+                if (hygieneCanRate?.reason === "no_order" || !hygieneCanRate?.canRate) {
+                  Alert.alert(
+                    "Değerlendirme Yapılamıyor",
+                    "Hijyen değerlendirmesi yapabilmek için bu satıcıdan en az bir teslim alınmış siparişiniz olması gerekmektedir."
+                  );
                   return;
                 }
                 setShowHygieneModal(true);
@@ -374,9 +399,10 @@ export default function SellerScreen() {
               </View>
               <Text style={styles.statLabel}>Hijyen</Text>
               <Text style={styles.hygieneCount}>
-                {hygieneRated ? "Değerlendirildi" :
+                {(hygieneRated || hygieneCanRate?.reason === "already_rated") ? "Değerlendirildi" :
+                 hygieneCanRate?.canRate ? "Puan Ver" :
                  hygieneData.platformScore != null && hygieneData.platformScore > 0 ? "Doğrulandı" :
-                 hygieneData.totalCount > 0 ? `${hygieneData.totalCount} değ.` : "Puan Ver"}
+                 hygieneData.totalCount > 0 ? `${hygieneData.totalCount} değ.` : "Profil Var"}
               </Text>
             </Pressable>
           )}

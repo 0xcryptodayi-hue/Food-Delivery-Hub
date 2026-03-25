@@ -56,12 +56,23 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
         return;
       }
     } else {
+      const [deliveredOrder] = await db.select({ id: ordersTable.id })
+        .from(ordersTable)
+        .where(and(
+          eq(ordersTable.sellerId, sellerId),
+          eq(ordersTable.buyerId, req.userId!),
+          eq(ordersTable.status, "delivered"),
+        ))
+        .limit(1);
+      if (!deliveredOrder) {
+        res.status(403).json({ error: "Yalnızca bu satıcıdan teslim aldığınız siparişler için hijyen değerlendirmesi yapabilirsiniz" });
+        return;
+      }
       const existing = await db.select({ id: hygieneRatingsTable.id })
         .from(hygieneRatingsTable)
         .where(and(
           eq(hygieneRatingsTable.sellerId, sellerId),
           eq(hygieneRatingsTable.buyerId, req.userId!),
-          isNull(hygieneRatingsTable.orderId),
         ))
         .limit(1);
       if (existing.length > 0) {
@@ -136,6 +147,44 @@ router.get("/check/:orderId", requireAuth, async (req: AuthRequest, res) => {
       .where(and(eq(hygieneRatingsTable.orderId, orderId), eq(hygieneRatingsTable.buyerId, req.userId!)))
       .limit(1);
     res.json({ rated: existing.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+router.get("/can-rate/:sellerId", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const sellerId = parseInt(req.params.sellerId);
+    if (!sellerId) { res.status(400).json({ error: "Geçersiz satıcı ID" }); return; }
+
+    const [deliveredOrder] = await db.select({ id: ordersTable.id })
+      .from(ordersTable)
+      .where(and(
+        eq(ordersTable.sellerId, sellerId),
+        eq(ordersTable.buyerId, req.userId!),
+        eq(ordersTable.status, "delivered"),
+      ))
+      .limit(1);
+
+    if (!deliveredOrder) {
+      res.json({ canRate: false, reason: "no_order" });
+      return;
+    }
+
+    const [existing] = await db.select({ id: hygieneRatingsTable.id })
+      .from(hygieneRatingsTable)
+      .where(and(
+        eq(hygieneRatingsTable.sellerId, sellerId),
+        eq(hygieneRatingsTable.buyerId, req.userId!),
+      ))
+      .limit(1);
+
+    if (existing) {
+      res.json({ canRate: false, reason: "already_rated" });
+      return;
+    }
+
+    res.json({ canRate: true });
   } catch (err) {
     res.status(500).json({ error: "Sunucu hatası" });
   }
