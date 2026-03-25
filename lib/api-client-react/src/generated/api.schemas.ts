@@ -73,6 +73,7 @@ export interface UserProfile {
   id: number;
   name: string;
   avatar?: string | null;
+  storeImage?: string | null;
   address?: string | null;
   rating?: number | null;
   reviewCount: number;

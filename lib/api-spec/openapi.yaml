@@ -716,6 +716,9 @@ components:
         avatar:
           type: string
           nullable: true
+        storeImage:
+          type: string
+          nullable: true
         address:
           type: string
           nullable: true

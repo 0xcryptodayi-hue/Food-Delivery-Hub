@@ -101,6 +101,7 @@ export const GetUserResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   avatar: zod.string().nullish(),
+  storeImage: zod.string().nullish(),
   address: zod.string().nullish(),
   rating: zod.number().nullish(),
   reviewCount: zod.number(),

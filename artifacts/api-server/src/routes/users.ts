@@ -10,9 +10,10 @@ router.get("/:id", async (req, res) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
     res.json({
-      id: user.id, name: user.name, avatar: user.avatar, address: user.address,
-      rating: user.rating, reviewCount: user.reviewCount, isSeller: user.isSeller,
-      bio: user.bio, totalOrders: user.totalOrders, memberSince: user.createdAt.toISOString(),
+      id: user.id, name: user.name, avatar: user.avatar, storeImage: user.storeImage,
+      address: user.address, rating: user.rating, reviewCount: user.reviewCount,
+      isSeller: user.isSeller, bio: user.bio, totalOrders: user.totalOrders,
+      memberSince: user.createdAt.toISOString(),
     });
   } catch (err) {
     req.log.error(err);
