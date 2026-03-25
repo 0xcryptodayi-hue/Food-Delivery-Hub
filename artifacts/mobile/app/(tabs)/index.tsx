@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, TextInput,
-  RefreshControl, Platform, Modal, Animated, ScrollView, Image,
+  RefreshControl, Platform, Modal, Animated, ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -213,15 +213,6 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: topInset + 6, paddingBottom: 8 }]}>
 
-        {/* Sol: Logo */}
-        <View style={styles.headerLogoWrap}>
-          <Image
-            source={require("@/assets/images/logo_new.png")}
-            style={styles.headerLogo}
-            resizeMode="contain"
-          />
-        </View>
-
         {/* Orta: Marka Adı + Slogan */}
         <View style={styles.headerBrand}>
           <Text style={styles.headerBrandName}>HanımEli</Text>
@@ -383,15 +374,6 @@ const styles = StyleSheet.create({
     }),
   },
 
-  /* Logo */
-  headerLogoWrap: {
-    width: 58, height: 60,
-    overflow: "hidden",
-    alignItems: "flex-start",
-    justifyContent: "center",
-  },
-  headerLogo: { width: 116, height: 60 },
-
   /* Brand */
   headerBrand: {
     flex: 1,
@@ -423,11 +405,9 @@ const styles = StyleSheet.create({
 
   /* Search bar (below header) */
   searchBarWrap: {
-    backgroundColor: "#FEF3E2",
+    backgroundColor: Colors.light.background,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0D9B5",
+    paddingVertical: 10,
   },
   searchBar: {
     flexDirection: "row", alignItems: "center", gap: 8,
