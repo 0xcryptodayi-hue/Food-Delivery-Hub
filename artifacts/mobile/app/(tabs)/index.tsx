@@ -14,13 +14,18 @@ import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
 
 const CATEGORIES = [
-  { slug: "all",        name: "Tümü",       icon: "🏠", color: "#E8F5E9", accent: "#43A047" },
-  { slug: "main-dish",  name: "Ana Yemek",  icon: "🍛", color: "#FFF3E0", accent: "#F57C00" },
-  { slug: "soup",       name: "Çorba",      icon: "🥣", color: "#FFEBEE", accent: "#E53935" },
-  { slug: "dessert",    name: "Tatlı",      icon: "🍮", color: "#FFF8E1", accent: "#F9A825" },
-  { slug: "breakfast",  name: "Kahvaltı",   icon: "🥞", color: "#F3E5F5", accent: "#8E24AA" },
-  { slug: "salad",      name: "Salata",     icon: "🥗", color: "#E0F2F1", accent: "#00897B" },
-  { slug: "pastry",     name: "Börek",      icon: "🥐", color: "#EDE7F6", accent: "#5E35B1" },
+  { slug: "all",         name: "Tümü" },
+  { slug: "borek",       name: "Börek", subcategories: ["Sigara böreği", "Paçanga böreği", "Su böreği", "Ispanaklı börek", "Kıymalı börek"] },
+  { slug: "pogaca",      name: "Poğaça" },
+  { slug: "baklava",     name: "Baklava" },
+  { slug: "kurabiye",    name: "Kurabiye" },
+  { slug: "sarma",       name: "Sarma / Dolma" },
+  { slug: "icli-kofte",  name: "İçli Köfte" },
+  { slug: "manti",       name: "Mantı" },
+  { slug: "soup",        name: "Çorba" },
+  { slug: "main-dish",   name: "Ana Yemek" },
+  { slug: "breakfast",   name: "Kahvaltılık" },
+  { slug: "dessert",     name: "Diğer Tatlılar" },
 ];
 
 type Product = {
@@ -51,21 +56,23 @@ function CategoryModal({
   onSelect: (slug: string) => void;
   onClose: () => void;
 }) {
-  const slideAnim = useRef(new Animated.Value(400)).current;
+  const slideAnim = useRef(new Animated.Value(500)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
         Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 400, duration: 220, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 500, duration: 220, useNativeDriver: true }),
         Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
       ]).start();
+      setExpanded(null);
     }
   }, [visible]);
 
@@ -91,29 +98,59 @@ function CategoryModal({
           </Pressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.categoryGrid}>
-          {CATEGORIES.map(cat => {
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {CATEGORIES.map((cat, index) => {
             const isActive = selected === cat.slug;
+            const hasSubcats = !!(cat as any).subcategories;
+            const isExpanded = expanded === cat.slug;
+
             return (
-              <Pressable
-                key={cat.slug}
-                style={({ pressed }) => [
-                  styles.categoryCard,
-                  { backgroundColor: isActive ? cat.accent : cat.color },
-                  pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
-                ]}
-                onPress={() => { onSelect(cat.slug); onClose(); }}
-              >
-                <Text style={styles.categoryCardEmoji}>{cat.icon}</Text>
-                <Text style={[styles.categoryCardName, { color: isActive ? "#fff" : cat.accent }]}>
-                  {cat.name}
-                </Text>
-                {isActive && (
-                  <View style={styles.categoryCardCheck}>
-                    <Feather name="check" size={12} color="#fff" />
+              <View key={cat.slug}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.catRow,
+                    isActive && styles.catRowActive,
+                    pressed && { backgroundColor: Colors.light.backgroundSecondary },
+                    index === CATEGORIES.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                  onPress={() => {
+                    if (hasSubcats) {
+                      setExpanded(isExpanded ? null : cat.slug);
+                    } else {
+                      onSelect(cat.slug);
+                      onClose();
+                    }
+                  }}
+                >
+                  <Text style={[styles.catRowText, isActive && styles.catRowTextActive]}>
+                    {cat.name}
+                  </Text>
+                  <View style={styles.catRowRight}>
+                    {isActive && <Feather name="check" size={16} color={Colors.light.primary} style={{ marginRight: 6 }} />}
+                    {hasSubcats && (
+                      <Feather
+                        name={isExpanded ? "chevron-up" : "chevron-down"}
+                        size={16}
+                        color={Colors.light.textMuted}
+                      />
+                    )}
+                  </View>
+                </Pressable>
+
+                {hasSubcats && isExpanded && (
+                  <View style={styles.subcatList}>
+                    {(cat as any).subcategories.map((sub: string) => (
+                      <Pressable
+                        key={sub}
+                        style={({ pressed }) => [styles.subcatRow, pressed && { backgroundColor: Colors.light.backgroundSecondary }]}
+                        onPress={() => { onSelect(cat.slug); onClose(); }}
+                      >
+                        <Text style={styles.subcatText}>{sub}</Text>
+                      </Pressable>
+                    ))}
                   </View>
                 )}
-              </Pressable>
+              </View>
             );
           })}
         </ScrollView>
@@ -186,12 +223,28 @@ export default function HomeScreen() {
           <Text style={styles.subtitle}>Bugün ne yemek istersiniz?</Text>
         </View>
         <View style={styles.headerActions}>
+          {/* Kategori simgesi */}
+          <Pressable
+            style={[styles.iconBtn, selectedCategory !== "all" && styles.iconBtnActive]}
+            onPress={() => setShowCategories(true)}
+          >
+            <Feather
+              name="grid"
+              size={20}
+              color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.text}
+            />
+            {selectedCategory !== "all" && <View style={styles.activeDot} />}
+          </Pressable>
+
+          {/* Bildirim */}
           <Pressable
             style={styles.iconBtn}
             onPress={() => user ? router.push("/notifications") : router.push("/auth")}
           >
             <Feather name="bell" size={20} color={Colors.light.text} />
           </Pressable>
+
+          {/* Sepet */}
           <Pressable style={styles.cartBtn} onPress={() => router.push("/cart")}>
             <Feather
               name="shopping-cart"
@@ -207,7 +260,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Search + Categories button ── */}
+      {/* ── Search ── */}
       <View style={styles.searchRow}>
         <View style={styles.searchContainer}>
           <Feather name="search" size={16} color={Colors.light.textMuted} />
@@ -225,20 +278,12 @@ export default function HomeScreen() {
             </Pressable>
           )}
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.catButton, pressed && { opacity: 0.85 }]}
-          onPress={() => setShowCategories(true)}
-        >
-          <Feather name="sliders" size={16} color="#fff" />
-          <Text style={styles.catButtonText}>Kategori</Text>
-        </Pressable>
       </View>
 
       {/* ── Active filter pill ── */}
       {selectedCategory !== "all" && (
         <View style={styles.filterRow}>
-          <View style={[styles.activePill, { backgroundColor: activeCat!.accent }]}>
-            <Text style={styles.activePillEmoji}>{activeCat!.icon}</Text>
+          <View style={styles.activePill}>
             <Text style={styles.activePillText}>{activeCat!.name}</Text>
             <Pressable onPress={() => setSelectedCategory("all")} hitSlop={6} style={styles.pillClose}>
               <Feather name="x" size={13} color="#fff" />
@@ -332,6 +377,15 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     borderWidth: 1, borderColor: Colors.light.borderLight,
   },
+  iconBtnActive: {
+    borderColor: Colors.light.primary,
+    backgroundColor: "#FFF0F0",
+  },
+  activeDot: {
+    position: "absolute", top: 8, right: 8,
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: Colors.light.primary,
+  },
   cartBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: Colors.light.surface,
@@ -349,7 +403,7 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
 
-  /* Search + Category button */
+  /* Search */
   searchRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, marginBottom: 10, alignItems: "center" },
   searchContainer: {
     flex: 1, flexDirection: "row", alignItems: "center", gap: 10,
@@ -358,16 +412,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.light.borderLight,
   },
   searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text },
-  catButton: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: Colors.light.primary,
-    borderRadius: 16, paddingHorizontal: 14, height: 48,
-    ...Platform.select({
-      ios: { shadowColor: Colors.light.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
-  },
-  catButtonText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
 
   /* Active filter pill */
   filterRow: {
@@ -376,9 +420,9 @@ const styles = StyleSheet.create({
   },
   activePill: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    borderRadius: 20, paddingVertical: 6, paddingLeft: 10, paddingRight: 8,
+    borderRadius: 20, paddingVertical: 6, paddingLeft: 12, paddingRight: 8,
+    backgroundColor: Colors.light.primary,
   },
-  activePillEmoji: { fontSize: 15 },
   activePillText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
   pillClose: {
     width: 20, height: 20, borderRadius: 10,
@@ -412,6 +456,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingTop: 12, zIndex: 11,
+    maxHeight: "80%",
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 20 },
       android: { elevation: 20 },
@@ -423,7 +468,7 @@ const styles = StyleSheet.create({
   },
   sheetHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 24, marginBottom: 20,
+    paddingHorizontal: 24, marginBottom: 8,
   },
   sheetTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.text },
   closeBtn: {
@@ -431,27 +476,33 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.backgroundSecondary,
     alignItems: "center", justifyContent: "center",
   },
-  categoryGrid: {
-    flexDirection: "row", flexWrap: "wrap", gap: 12,
-    paddingHorizontal: 20, paddingBottom: 12,
+
+  /* Category rows */
+  catRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 24, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: Colors.light.borderLight,
   },
-  categoryCard: {
-    width: "30%", flexGrow: 1,
-    alignItems: "center", justifyContent: "center",
-    paddingVertical: 20, borderRadius: 18, gap: 8,
-    position: "relative",
-    minWidth: 90,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6 },
-      android: { elevation: 2 },
-    }),
+  catRowActive: {
+    backgroundColor: "#FFF5F5",
   },
-  categoryCardEmoji: { fontSize: 32 },
-  categoryCardName: { fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" },
-  categoryCardCheck: {
-    position: "absolute", top: 8, right: 8,
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.35)",
-    alignItems: "center", justifyContent: "center",
+  catRowText: {
+    fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.light.text,
+  },
+  catRowTextActive: {
+    color: Colors.light.primary, fontFamily: "Inter_600SemiBold",
+  },
+  catRowRight: { flexDirection: "row", alignItems: "center" },
+
+  /* Subcategory rows */
+  subcatList: {
+    backgroundColor: Colors.light.backgroundSecondary,
+  },
+  subcatRow: {
+    paddingHorizontal: 36, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: Colors.light.borderLight,
+  },
+  subcatText: {
+    fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary,
   },
 });
