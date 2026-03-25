@@ -8,13 +8,14 @@ const router = Router();
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { rating, comment, sellerId, orderId, productId } = req.body;
-    if (!rating || !sellerId || !orderId) {
-      res.status(400).json({ error: "Rating, sellerId, and orderId are required" });
+    if (!rating || !sellerId) {
+      res.status(400).json({ error: "Rating and sellerId are required" });
       return;
     }
     const [review] = await db.insert(reviewsTable).values({
       rating: parseInt(rating), comment, buyerId: req.userId!,
-      sellerId: parseInt(sellerId), orderId: parseInt(orderId),
+      sellerId: parseInt(sellerId),
+      orderId: orderId ? parseInt(orderId) : null,
       productId: productId ? parseInt(productId) : undefined,
     }).returning();
 

@@ -9,7 +9,7 @@ export const reviewsTable = pgTable("reviews", {
   buyerId: integer("buyer_id").notNull(),
   sellerId: integer("seller_id").notNull(),
   productId: integer("product_id"),
-  orderId: integer("order_id").notNull(),
+  orderId: integer("order_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

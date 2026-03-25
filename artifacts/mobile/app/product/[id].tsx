@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Image, Alert, Platform, ActivityIndicator,
+  Image, Alert, Platform, ActivityIndicator, Modal, TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
