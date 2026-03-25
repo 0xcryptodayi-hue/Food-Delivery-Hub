@@ -19,6 +19,7 @@ export const usersTable = pgTable("users", {
   isSeller: boolean("is_seller").notNull().default(false),
   isVerified: boolean("is_verified").notNull().default(false),
   totalOrders: integer("total_orders").notNull().default(0),
+  deliveryFee: real("delivery_fee").notNull().default(15),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

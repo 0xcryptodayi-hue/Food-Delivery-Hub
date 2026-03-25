@@ -35,6 +35,7 @@ export default function OrderDetailScreen() {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewed, setReviewed] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
   const isSeller = user?.id === order?.sellerId;
   const isBuyer = user?.id === order?.buyerId;
@@ -75,6 +76,7 @@ export default function OrderDetailScreen() {
           comment: reviewComment || undefined,
           sellerId: order.sellerId,
           orderId: order.id,
+          ...(selectedProductId ? { productId: selectedProductId } : {}),
         },
       });
       setReviewed(true);
@@ -269,7 +271,37 @@ export default function OrderDetailScreen() {
 
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
             <Text style={styles.reviewSellerName}>{order.sellerName}</Text>
-            <Text style={styles.reviewSubtitle}>Bu satıcıyı nasıl değerlendirirsiniz?</Text>
+            <Text style={styles.reviewSubtitle}>Siparişinizi değerlendirin</Text>
+
+            {items.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={styles.fieldLabel}>Ürün seçin (opsiyonel)</Text>
+                <View style={{ gap: 8, marginTop: 8 }}>
+                  <Pressable
+                    style={[styles.productSelectBtn, selectedProductId === null && styles.productSelectBtnActive]}
+                    onPress={() => setSelectedProductId(null)}
+                  >
+                    <Text style={[styles.productSelectText, selectedProductId === null && styles.productSelectTextActive]}>
+                      Tüm sipariş (satıcı)
+                    </Text>
+                  </Pressable>
+                  {items.map((item, i) => {
+                    const pid = (item as { productId?: number }).productId ?? null;
+                    return (
+                      <Pressable
+                        key={i}
+                        style={[styles.productSelectBtn, selectedProductId === pid && pid !== null && styles.productSelectBtnActive]}
+                        onPress={() => pid !== null && setSelectedProductId(pid)}
+                      >
+                        <Text style={[styles.productSelectText, selectedProductId === pid && pid !== null && styles.productSelectTextActive]}>
+                          {item.productTitle}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map(s => (
@@ -398,4 +430,15 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   submitBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 17 },
+  productSelectBtn: {
+    paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12,
+    backgroundColor: Colors.light.backgroundSecondary,
+    borderWidth: 1, borderColor: Colors.light.border,
+  },
+  productSelectBtnActive: {
+    backgroundColor: Colors.light.primary + "12",
+    borderColor: Colors.light.primary,
+  },
+  productSelectText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.textSecondary },
+  productSelectTextActive: { color: Colors.light.primary, fontFamily: "Inter_600SemiBold" },
 });

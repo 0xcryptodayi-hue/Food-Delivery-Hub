@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Image, Alert, Platform, ActivityIndicator,
@@ -12,6 +12,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
 
+const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+
+type ProductReview = {
+  id: number;
+  rating: number;
+  comment: string | null;
+  buyerName: string;
+  createdAt: string;
+};
+
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -20,8 +30,21 @@ export default function ProductDetailScreen() {
   const queryClient = useQueryClient();
   const [qty, setQty] = useState(1);
   const [localFavorited, setLocalFavorited] = useState<boolean | null>(null);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   const { data: product, isLoading } = useGetProduct(parseInt(id ?? "0"));
+
+  useEffect(() => {
+    const productId = parseInt(id ?? "0");
+    if (!productId) return;
+    setReviewsLoading(true);
+    fetch(`${API_BASE}/reviews/product/${productId}`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setReviews(d); })
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false));
+  }, [id]);
   const toggleFav = useToggleFavorite();
 
   const isFavorited = localFavorited !== null ? localFavorited : (product?.isFavorited ?? false);
@@ -154,6 +177,58 @@ export default function ProductDetailScreen() {
             </View>
             <Feather name="chevron-right" size={18} color={Colors.light.textMuted} />
           </Pressable>
+
+          {/* Reviews Section */}
+          <View style={styles.section}>
+            <View style={styles.reviewsSectionHeader}>
+              <Text style={styles.sectionTitle}>Yorumlar</Text>
+              {reviews.length > 0 && (
+                <View style={styles.reviewsCount}>
+                  <Ionicons name="star" size={14} color={Colors.light.star} />
+                  <Text style={styles.reviewsCountText}>{reviews.length} yorum</Text>
+                </View>
+              )}
+            </View>
+
+            {reviewsLoading ? (
+              <ActivityIndicator color={Colors.light.primary} style={{ marginTop: 12 }} />
+            ) : reviews.length === 0 ? (
+              <View style={styles.noReviews}>
+                <Ionicons name="star-outline" size={32} color={Colors.light.textMuted} />
+                <Text style={styles.noReviewsText}>Henüz yorum yok</Text>
+                <Text style={styles.noReviewsSubText}>Bu ürünü sipariş edip ilk yorumu siz yapın</Text>
+              </View>
+            ) : (
+              reviews.map(review => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewCardHeader}>
+                    <View style={styles.reviewAvatar}>
+                      <Text style={styles.reviewAvatarText}>{review.buyerName[0]?.toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewBuyerName}>{review.buyerName}</Text>
+                      <Text style={styles.reviewDate}>
+                        {new Date(review.createdAt).toLocaleDateString("tr-TR")}
+                      </Text>
+                    </View>
+                    <View style={styles.reviewStars}>
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Ionicons
+                          key={s}
+                          name="star"
+                          size={12}
+                          color={s <= review.rating ? Colors.light.star : Colors.light.border}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  {review.comment && (
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -251,4 +326,27 @@ const styles = StyleSheet.create({
   addBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
   cartIndicator: { backgroundColor: "rgba(255,255,255,0.3)", borderRadius: 12, minWidth: 22, height: 22, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
   cartIndicatorText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 11 },
+
+  reviewsSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+  reviewsCount: { flexDirection: "row", alignItems: "center", gap: 4 },
+  reviewsCountText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary },
+
+  noReviews: { alignItems: "center", paddingVertical: 24, gap: 8 },
+  noReviewsText: { fontSize: 15, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary },
+  noReviewsSubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, textAlign: "center" },
+
+  reviewCard: {
+    backgroundColor: Colors.light.surface, borderRadius: 14, padding: 14,
+    marginBottom: 10, gap: 8,
+  },
+  reviewCardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  reviewAvatar: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.light.primary + "20", alignItems: "center", justifyContent: "center",
+  },
+  reviewAvatarText: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.light.primary },
+  reviewBuyerName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
+  reviewDate: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 1 },
+  reviewStars: { flexDirection: "row", gap: 2 },
+  reviewComment: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, lineHeight: 19 },
 });

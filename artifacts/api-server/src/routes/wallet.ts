@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, walletTransactionsTable } from "@workspace/db";
-import { eq, and, sum, sql } from "drizzle-orm";
+import { db, walletTransactionsTable, ordersTable } from "@workspace/db";
+import { eq, and, sum, ne } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const router = Router();
@@ -22,16 +22,22 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
       .from(walletTransactionsTable)
       .where(and(eq(walletTransactionsTable.sellerId, sellerId), eq(walletTransactionsTable.type, "withdrawal")));
 
+    const [commissionRow] = await db.select({ total: sum(ordersTable.platformFee) })
+      .from(ordersTable)
+      .where(and(eq(ordersTable.sellerId, sellerId), ne(ordersTable.status, "cancelled")));
+
     const totalEarnings = parseFloat(earnings?.total ?? "0");
     const pendingBalance = parseFloat(pending?.total ?? "0");
     const totalWithdrawn = parseFloat(withdrawn?.total ?? "0");
+    const totalCommissionPaid = parseFloat(commissionRow?.total ?? "0");
 
     res.json({
       totalEarnings,
       pendingBalance,
       availableBalance: totalEarnings - totalWithdrawn,
       totalWithdrawn,
-      platformFeePaid: 0,
+      platformFeePaid: totalCommissionPaid,
+      commissionRate: 0.10,
       recentTransactions: transactions.slice(-20).map(t => ({ ...t, createdAt: t.createdAt.toISOString() })),
     });
   } catch (err) {

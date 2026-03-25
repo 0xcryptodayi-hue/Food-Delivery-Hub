@@ -4,7 +4,6 @@ import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const PLATFORM_FEE_RATE = 0.10;
-const DELIVERY_FEE = 15;
 
 const STATUS_LABELS: Record<string, string> = {
   received: "Alındı", preparing: "Hazırlanıyor", ready: "Hazır",
@@ -67,7 +66,8 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
       await db.update(productsTable).set({ remainingStock: product.remainingStock - item.quantity }).where(eq(productsTable.id, product.id));
     }
 
-    const deliveryFee = DELIVERY_FEE;
+    const [sellerUser] = await db.select({ deliveryFee: usersTable.deliveryFee }).from(usersTable).where(eq(usersTable.id, parseInt(sellerId))).limit(1);
+    const deliveryFee = sellerUser?.deliveryFee ?? 15;
     const totalAmount = subtotal + deliveryFee;
     const platformFee = parseFloat((subtotal * PLATFORM_FEE_RATE).toFixed(2));
     const sellerAmount = parseFloat((subtotal - platformFee).toFixed(2));

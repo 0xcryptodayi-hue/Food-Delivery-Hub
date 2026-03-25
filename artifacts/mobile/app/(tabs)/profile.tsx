@@ -104,6 +104,8 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Satıcı</Text>
           <View style={styles.menuCard}>
+            <MenuItem icon="grid" label="Yönetici Paneli" value="Komisyon, kargo ve kazanç" onPress={() => router.push("/seller-dashboard")} />
+            <View style={styles.menuDivider} />
             <MenuItem icon="package" label="Ürünlerim" onPress={() => router.push("/my-products")} />
             <View style={styles.menuDivider} />
             <MenuItem icon="dollar-sign" label="Cüzdanım" onPress={() => router.push("/wallet")} />

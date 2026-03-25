@@ -49,6 +49,30 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+router.get("/product/:productId", async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    const rows = await db.select().from(reviewsTable).where(eq(reviewsTable.productId, productId))
+      .orderBy(reviewsTable.createdAt);
+
+    const buyerIds = [...new Set(rows.map(r => r.buyerId))];
+    const buyers = buyerIds.length > 0
+      ? await db.select({ id: usersTable.id, name: usersTable.name, avatar: usersTable.avatar })
+        .from(usersTable).where(inArray(usersTable.id, buyerIds))
+      : [];
+    const buyerMap = new Map(buyers.map(b => [b.id, b]));
+
+    res.json(rows.map(r => ({
+      ...r, buyerName: buyerMap.get(r.buyerId)?.name ?? "Unknown",
+      buyerAvatar: buyerMap.get(r.buyerId)?.avatar ?? null,
+      createdAt: r.createdAt.toISOString(),
+    })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.get("/seller/:sellerId", async (req, res) => {
   try {
     const sellerId = parseInt(req.params.sellerId);
