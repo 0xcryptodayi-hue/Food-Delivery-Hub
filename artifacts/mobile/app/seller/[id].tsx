@@ -185,7 +185,21 @@ const reviewStyles = StyleSheet.create({
   ratingPillText: { fontSize: 11, fontFamily: "Inter_700Bold" },
 });
 
-type HygieneData = { avgScore: number | null; totalCount: number };
+type HygieneData = {
+  avgScore: number | null;
+  totalCount: number;
+  platformScore: number | null;
+  declarations: {
+    wearsGloves: boolean;
+    wearsBone: boolean;
+    hasHealthCert: boolean;
+    washesHands: boolean;
+    singleUsePackaging: boolean;
+    kitchenProtocol: boolean;
+    note: string | null;
+    updatedAt: string | null;
+  } | null;
+};
 
 export default function SellerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -307,18 +321,19 @@ export default function SellerScreen() {
             <View style={[styles.statBox, styles.hygieneBox]}>
               <View style={styles.statTop}>
                 <Feather name="shield" size={14} color="#10B981" />
-                {hygieneData.avgScore != null ? (
+                {hygieneData.platformScore != null && hygieneData.platformScore > 0 ? (
+                  <Text style={[styles.statValue, { color: "#10B981" }]}>{hygieneData.platformScore.toFixed(1)}</Text>
+                ) : hygieneData.avgScore != null ? (
                   <Text style={[styles.statValue, { color: "#10B981" }]}>{hygieneData.avgScore.toFixed(1)}</Text>
                 ) : (
                   <Text style={[styles.statValue, { color: "#10B981", fontSize: 13 }]}>Yeni</Text>
                 )}
               </View>
               <Text style={styles.statLabel}>Hijyen</Text>
-              {hygieneData.totalCount > 0 ? (
-                <Text style={styles.hygieneCount}>{hygieneData.totalCount} değ.</Text>
-              ) : (
-                <Text style={styles.hygieneCount}>İlk siz olun</Text>
-              )}
+              <Text style={styles.hygieneCount}>
+                {hygieneData.platformScore != null && hygieneData.platformScore > 0 ? "Doğrulandı" :
+                 hygieneData.totalCount > 0 ? `${hygieneData.totalCount} değ.` : "Profil Yok"}
+              </Text>
             </View>
           )}
           <Pressable
@@ -334,6 +349,63 @@ export default function SellerScreen() {
             <Text style={styles.statLabel}>Sipariş</Text>
           </View>
         </View>
+
+        {/* Hygiene Profile card */}
+        {hygieneData != null && (hygieneData.platformScore != null || hygieneData.declarations != null) && (
+          <View style={styles.hygieneCard}>
+            <View style={styles.hygieneCardHeader}>
+              <View style={styles.hygieneCardIconWrap}>
+                <Feather name="shield" size={18} color="#10B981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hygieneCardTitle}>Hijyen Profili</Text>
+                <Text style={styles.hygieneCardSub}>Platform tarafından doğrulandı</Text>
+              </View>
+              {hygieneData.platformScore != null && (
+                <View style={styles.hygieneCardScorePill}>
+                  <Text style={styles.hygieneCardScore}>{hygieneData.platformScore.toFixed(1)}</Text>
+                  <Text style={styles.hygieneCardScoreMax}>/5</Text>
+                </View>
+              )}
+            </View>
+
+            {hygieneData.declarations != null && (
+              <View style={styles.hygieneTagsWrap}>
+                {hygieneData.declarations.wearsGloves && (
+                  <View style={styles.hygieneTag}><Feather name="shield" size={11} color="#10B981" /><Text style={styles.hygieneTagText}>Eldiven</Text></View>
+                )}
+                {hygieneData.declarations.wearsBone && (
+                  <View style={styles.hygieneTag}><Feather name="user" size={11} color="#10B981" /><Text style={styles.hygieneTagText}>Bone/Kep</Text></View>
+                )}
+                {hygieneData.declarations.hasHealthCert && (
+                  <View style={styles.hygieneTag}><Feather name="award" size={11} color="#10B981" /><Text style={styles.hygieneTagText}>Sağlık Belgesi</Text></View>
+                )}
+                {hygieneData.declarations.washesHands && (
+                  <View style={styles.hygieneTag}><Feather name="droplet" size={11} color="#10B981" /><Text style={styles.hygieneTagText}>El Yıkama</Text></View>
+                )}
+                {hygieneData.declarations.singleUsePackaging && (
+                  <View style={styles.hygieneTag}><Feather name="box" size={11} color="#10B981" /><Text style={styles.hygieneTagText}>Tek Kull. Ambalaj</Text></View>
+                )}
+                {hygieneData.declarations.kitchenProtocol && (
+                  <View style={styles.hygieneTag}><Feather name="trash-2" size={11} color="#10B981" /><Text style={styles.hygieneTagText}>Mutfak Protokolü</Text></View>
+                )}
+              </View>
+            )}
+
+            {hygieneData.declarations?.note ? (
+              <Text style={styles.hygieneCardNote}>"{hygieneData.declarations.note}"</Text>
+            ) : null}
+
+            {hygieneData.avgScore != null && hygieneData.totalCount > 0 && (
+              <View style={styles.hygieneCardBuyerRow}>
+                <Feather name="users" size={11} color={Colors.light.textMuted} />
+                <Text style={styles.hygieneCardBuyerText}>
+                  Alıcı hijyen puanı: {hygieneData.avgScore.toFixed(1)}/5 ({hygieneData.totalCount} değerlendirme)
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {user?.id !== parseInt(id ?? "0") && (
           <Pressable style={styles.messageBtn} onPress={handleMessage}>
@@ -469,6 +541,37 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
   hygieneBox: { borderColor: "#10B98130", backgroundColor: "#10B98108" },
   hygieneCount: { fontSize: 9, fontFamily: "Inter_400Regular", color: "#10B981", marginTop: 1 },
+
+  hygieneCard: {
+    backgroundColor: "#10B98108", borderRadius: 18, padding: 16, marginBottom: 16,
+    borderWidth: 1, borderColor: "#10B98130", width: "100%",
+  },
+  hygieneCardHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
+  hygieneCardIconWrap: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: "#10B98120",
+    alignItems: "center", justifyContent: "center",
+  },
+  hygieneCardTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#10B981" },
+  hygieneCardSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#10B981", opacity: 0.75 },
+  hygieneCardScorePill: {
+    flexDirection: "row", alignItems: "baseline", gap: 1,
+    backgroundColor: "#10B981", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4,
+  },
+  hygieneCardScore: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#fff" },
+  hygieneCardScoreMax: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#fff", opacity: 0.85 },
+  hygieneTagsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
+  hygieneTag: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "#10B98115", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4,
+    borderWidth: 1, borderColor: "#10B98125",
+  },
+  hygieneTagText: { fontSize: 11, fontFamily: "Inter_500Medium", color: "#10B981" },
+  hygieneCardNote: {
+    fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary,
+    fontStyle: "italic", marginBottom: 8, lineHeight: 18,
+  },
+  hygieneCardBuyerRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
+  hygieneCardBuyerText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
 
   messageBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,

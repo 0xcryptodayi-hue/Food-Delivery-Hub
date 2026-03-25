@@ -21,6 +21,16 @@ export const usersTable = pgTable("users", {
   isVerified: boolean("is_verified").notNull().default(false),
   totalOrders: integer("total_orders").notNull().default(0),
   deliveryFee: real("delivery_fee").notNull().default(15),
+  // Hygiene declarations (seller self-reported)
+  hygieneWearsGloves: boolean("hygiene_wears_gloves").notNull().default(false),
+  hygieneWearsBone: boolean("hygiene_wears_bone").notNull().default(false),
+  hygieneHasHealthCert: boolean("hygiene_has_health_cert").notNull().default(false),
+  hygieneWashesHands: boolean("hygiene_washes_hands").notNull().default(false),
+  hygieneSingleUsePackaging: boolean("hygiene_single_use_packaging").notNull().default(false),
+  hygieneKitchenProtocol: boolean("hygiene_kitchen_protocol").notNull().default(false),
+  hygieneNote: text("hygiene_note"),
+  hygienePlatformScore: real("hygiene_platform_score"),
+  hygieneUpdatedAt: timestamp("hygiene_updated_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

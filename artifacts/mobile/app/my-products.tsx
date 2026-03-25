@@ -27,14 +27,11 @@ const CATEGORIES = [
   { slug: "dessert",    name: "Tatlılar" },
 ];
 
-const PORTION_PRESETS = [
-  "1 porsiyon", "2 porsiyon", "4 porsiyon",
-  "500 gr", "1 kg", "1.5 kg", "2 kg", "3 kg",
-];
+const PORTION_PRESETS = ["Porsiyon", "500 gr", "1 Kg", "Adet"];
 
 const DISCOUNT_PRESETS = [0, 10, 15, 20, 25, 30, 40, 50];
 
-type Tab = "products" | "campaigns" | "ads";
+type Tab = "products" | "campaigns" | "ads" | "hygiene";
 
 type ProductFormData = {
   title: string;
@@ -134,7 +131,7 @@ function ProductForm({
 }) {
   const [form, setForm] = useState<ProductFormData>(initial ?? {
     title: "", description: "", price: "",
-    category: "borek", portion: "1 porsiyon",
+    category: "borek", portion: "Porsiyon",
     dailyStock: "10", prepTime: "30", imageUrl: "",
   });
   const [uploading, setUploading] = useState(false);
@@ -279,6 +276,62 @@ export default function MyProductsScreen() {
   const hasActiveCampaign = adCampaigns.some(c => c.status === "active");
   const activeCampaign = adCampaigns.find(c => c.status === "active");
 
+  // --- Hygiene declarations ---
+  const [hygieneDecl, setHygieneDecl] = useState({
+    wearsGloves: false,
+    wearsBone: false,
+    hasHealthCert: false,
+    washesHands: false,
+    singleUsePackaging: false,
+    kitchenProtocol: false,
+    note: "",
+  });
+  const [hygienePlatformScore, setHygienePlatformScore] = useState<number | null>(null);
+  const [hygieneLoading, setHygieneLoading] = useState(false);
+  const [hygieneSaving, setHygieneSaving] = useState(false);
+
+  const fetchHygieneDeclaration = useCallback(async () => {
+    if (!token) return;
+    setHygieneLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/hygiene/declaration`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setHygieneDecl({
+          wearsGloves: d.wearsGloves ?? false,
+          wearsBone: d.wearsBone ?? false,
+          hasHealthCert: d.hasHealthCert ?? false,
+          washesHands: d.washesHands ?? false,
+          singleUsePackaging: d.singleUsePackaging ?? false,
+          kitchenProtocol: d.kitchenProtocol ?? false,
+          note: d.note ?? "",
+        });
+        setHygienePlatformScore(d.platformScore ?? null);
+      }
+    } catch { } finally { setHygieneLoading(false); }
+  }, [token]);
+
+  const saveHygieneDeclaration = async () => {
+    if (!token) return;
+    setHygieneSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/hygiene/declaration`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(hygieneDecl),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setHygienePlatformScore(d.platformScore);
+        Alert.alert("Kaydedildi ✓", `Hijyen profiliniz güncellendi.\nPlatform puanınız: ${d.platformScore}/5`);
+      }
+    } catch {
+      Alert.alert("Hata", "Kaydedilemedi");
+    } finally { setHygieneSaving(false); }
+  };
+
   const fetchAdData = useCallback(async () => {
     if (!token) return;
     setAdLoading(true);
@@ -293,6 +346,7 @@ export default function MyProductsScreen() {
   }, [token]);
 
   useEffect(() => { if (activeTab === "ads") fetchAdData(); }, [activeTab, fetchAdData]);
+  useEffect(() => { if (activeTab === "hygiene") fetchHygieneDeclaration(); }, [activeTab, fetchHygieneDeclaration]);
 
   const handleSave = async (form: ProductFormData) => {
     if (!form.title || !form.price) { Alert.alert("Hata", "Başlık ve fiyat zorunludur"); return; }
@@ -443,6 +497,14 @@ export default function MyProductsScreen() {
           <Pressable style={styles.addBtn} onPress={() => { setEditProduct(null); setShowModal(true); }}>
             <Feather name="plus" size={20} color="#fff" />
           </Pressable>
+        ) : activeTab === "hygiene" ? (
+          <Pressable
+            style={[styles.addBtn, { backgroundColor: "#10B981", opacity: hygieneSaving ? 0.6 : 1 }]}
+            onPress={saveHygieneDeclaration}
+            disabled={hygieneSaving}
+          >
+            {hygieneSaving ? <ActivityIndicator color="#fff" size="small" /> : <Feather name="save" size={18} color="#fff" />}
+          </Pressable>
         ) : (
           <Pressable style={styles.iconBtn} onPress={() => { refetch(); fetchAdData(); }}>
             <Feather name="refresh-cw" size={16} color={Colors.light.text} />
@@ -464,11 +526,17 @@ export default function MyProductsScreen() {
           { id: "products", icon: "package", label: "Ürünlerim" },
           { id: "campaigns", icon: "tag", label: "Kampanya" },
           { id: "ads", icon: "zap", label: "Reklam" },
+          { id: "hygiene", icon: "shield", label: "Hijyen" },
         ] as { id: Tab; icon: string; label: string }[]).map(t => (
           <Pressable key={t.id} style={[styles.tab, activeTab === t.id && styles.tabActive]} onPress={() => setActiveTab(t.id)}>
-            <Feather name={t.icon as "package"} size={15} color={activeTab === t.id ? Colors.light.primary : Colors.light.textMuted} />
-            <Text style={[styles.tabText, activeTab === t.id && styles.tabTextActive]}>{t.label}</Text>
+            <Feather
+              name={t.icon as "package"}
+              size={15}
+              color={activeTab === t.id ? (t.id === "hygiene" ? "#10B981" : Colors.light.primary) : Colors.light.textMuted}
+            />
+            <Text style={[styles.tabText, activeTab === t.id && styles.tabTextActive, activeTab === t.id && t.id === "hygiene" && { color: "#10B981" }]}>{t.label}</Text>
             {t.id === "ads" && hasActiveCampaign && <View style={styles.tabBadge} />}
+            {t.id === "hygiene" && hygienePlatformScore != null && hygienePlatformScore > 0 && <View style={[styles.tabBadge, { backgroundColor: "#10B981" }]} />}
           </Pressable>
         ))}
       </View>
@@ -852,6 +920,98 @@ export default function MyProductsScreen() {
         </View>
       )}
 
+      {/* ─── TAB: HİJYEN ─── */}
+      {activeTab === "hygiene" && (
+        hygieneLoading ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator size="large" color="#10B981" />
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: bottomInset + 40 }}>
+            {/* Score card */}
+            <View style={styles.hygieneScoreCard}>
+              <View style={styles.hygieneScoreLeft}>
+                <Feather name="shield" size={36} color="#10B981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.hygieneScoreTitle}>Platform Hijyen Skoru</Text>
+                <View style={styles.hygieneScoreRow}>
+                  <Text style={styles.hygieneScoreBig}>{hygienePlatformScore?.toFixed(1) ?? "0.0"}</Text>
+                  <Text style={styles.hygieneScoreMax}>/5</Text>
+                </View>
+                <Text style={styles.hygieneScoreHint}>Bildirimleri onaylayarak skor artar</Text>
+              </View>
+              {hygienePlatformScore != null && hygienePlatformScore >= 4.5 && (
+                <View style={styles.hygieneEliteBadge}>
+                  <Text style={styles.hygieneEliteText}>⭐ Üstün</Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.hygieneSectionTitle}>Hijyen Bildirimleri</Text>
+            <Text style={styles.hygieneSectionSub}>Hangi önlemleri aldığınızı işaretleyin. Her kriter platorm skorunuzu etkiler.</Text>
+
+            {[
+              { key: "wearsGloves", label: "Eldiven kullanıyorum", desc: "Yemek hazırlarken tek kullanımlık eldiven takıyorum", icon: "shield", points: 1.0 },
+              { key: "wearsBone", label: "Bone / Kep kullanıyorum", desc: "Saçların yemeğe karışmaması için bone veya kep takıyorum", icon: "user", points: 1.0 },
+              { key: "hasHealthCert", label: "Sağlık sertifikam var", desc: "Gıda üretimi için geçerli sağlık sertifikasına sahibim", icon: "award", points: 1.25 },
+              { key: "washesHands", label: "El yıkama protokolü", desc: "Pişirmeden önce ve sonra ellerimi yıkıyorum", icon: "droplet", points: 0.5 },
+              { key: "singleUsePackaging", label: "Tek kullanımlık ambalaj", desc: "Ürünleri hijyenik tek kullanımlık kutularda teslim ediyorum", icon: "box", points: 0.75 },
+              { key: "kitchenProtocol", label: "Mutfak temizlik protokolü", desc: "Mutfağımı düzenli olarak dezenfekte ediyorum", icon: "trash-2", points: 0.5 },
+            ].map(item => {
+              const val = hygieneDecl[item.key as keyof typeof hygieneDecl] as boolean;
+              return (
+                <View key={item.key} style={styles.hygieneCriteriaRow}>
+                  <View style={[styles.hygieneCriteriaIcon, val && { backgroundColor: "#10B98120" }]}>
+                    <Feather name={item.icon as "shield"} size={18} color={val ? "#10B981" : Colors.light.textMuted} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.hygieneCriteriaLabel, val && { color: "#10B981" }]}>{item.label}</Text>
+                    <Text style={styles.hygieneCriteriaDesc}>{item.desc}</Text>
+                    <View style={styles.hygienePointsBadge}>
+                      <Text style={styles.hygienePointsText}>+{item.points} puan</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={val}
+                    onValueChange={v => setHygieneDecl(prev => ({ ...prev, [item.key]: v }))}
+                    trackColor={{ false: Colors.light.border, true: "#10B98160" }}
+                    thumbColor={val ? "#10B981" : "#f4f3f4"}
+                  />
+                </View>
+              );
+            })}
+
+            {/* Note field */}
+            <View style={[formStyles.fieldGroup, { marginTop: 8 }]}>
+              <Text style={formStyles.fieldLabel}>Ek Hijyen Notu (isteğe bağlı)</Text>
+              <TextInput
+                style={[formStyles.fieldInput, formStyles.fieldInputMultiline]}
+                value={hygieneDecl.note}
+                onChangeText={v => setHygieneDecl(prev => ({ ...prev, note: v }))}
+                placeholder="Örn: Helal sertifikalı ürünler kullanıyorum, mutfağım düzenli denetleniyor..."
+                placeholderTextColor={Colors.light.textMuted}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <Pressable
+              style={[styles.hygieneSaveBtn, hygieneSaving && { opacity: 0.6 }]}
+              onPress={saveHygieneDeclaration}
+              disabled={hygieneSaving}
+            >
+              {hygieneSaving ? <ActivityIndicator color="#fff" /> : (
+                <>
+                  <Feather name="check-circle" size={18} color="#fff" />
+                  <Text style={styles.hygieneSaveBtnText}>Hijyen Profilini Kaydet</Text>
+                </>
+              )}
+            </Pressable>
+          </ScrollView>
+        )
+      )}
+
       {/* ── MODAL: Ürün Ekle/Düzenle ── */}
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
         <View style={[styles.modal, { paddingTop: topInset + 16 }]}>
@@ -1199,4 +1359,46 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary, borderRadius: 14, paddingVertical: 15,
   },
   discountSaveBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
+
+  // Hygiene tab
+  hygieneScoreCard: {
+    flexDirection: "row", alignItems: "center", gap: 16,
+    backgroundColor: "#10B98112", borderRadius: 18, padding: 20, marginBottom: 20,
+    borderWidth: 1, borderColor: "#10B98130",
+  },
+  hygieneScoreLeft: {
+    width: 60, height: 60, borderRadius: 30, backgroundColor: "#10B98120",
+    alignItems: "center", justifyContent: "center",
+  },
+  hygieneScoreTitle: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#10B981", marginBottom: 2 },
+  hygieneScoreRow: { flexDirection: "row", alignItems: "baseline", gap: 2 },
+  hygieneScoreBig: { fontSize: 36, fontFamily: "Inter_700Bold", color: "#10B981" },
+  hygieneScoreMax: { fontSize: 16, fontFamily: "Inter_400Regular", color: "#10B981", opacity: 0.7 },
+  hygieneScoreHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#10B981", opacity: 0.8, marginTop: 2 },
+  hygieneEliteBadge: {
+    backgroundColor: "#10B981", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start",
+  },
+  hygieneEliteText: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
+  hygieneSectionTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 4 },
+  hygieneSectionSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginBottom: 16, lineHeight: 18 },
+  hygieneCriteriaRow: {
+    flexDirection: "row", alignItems: "center", gap: 14,
+    backgroundColor: Colors.light.surface, borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: Colors.light.borderLight,
+  },
+  hygieneCriteriaIcon: {
+    width: 44, height: 44, borderRadius: 14, backgroundColor: Colors.light.backgroundSecondary,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  hygieneCriteriaLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 2 },
+  hygieneCriteriaDesc: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, lineHeight: 16, marginBottom: 4 },
+  hygienePointsBadge: {
+    backgroundColor: "#10B98118", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, alignSelf: "flex-start",
+  },
+  hygienePointsText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#10B981" },
+  hygieneSaveBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    backgroundColor: "#10B981", borderRadius: 14, paddingVertical: 16, marginTop: 8,
+  },
+  hygieneSaveBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 },
 });

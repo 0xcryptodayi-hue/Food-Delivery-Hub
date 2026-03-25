@@ -5,6 +5,24 @@ import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const router = Router();
 
+function computePlatformScore(decl: {
+  hygieneWearsGloves: boolean;
+  hygieneWearsBone: boolean;
+  hygieneHasHealthCert: boolean;
+  hygieneWashesHands: boolean;
+  hygieneSingleUsePackaging: boolean;
+  hygieneKitchenProtocol: boolean;
+}): number {
+  let score = 0;
+  if (decl.hygieneWearsGloves) score += 1.0;
+  if (decl.hygieneWearsBone) score += 1.0;
+  if (decl.hygieneHasHealthCert) score += 1.25;
+  if (decl.hygieneWashesHands) score += 0.5;
+  if (decl.hygieneSingleUsePackaging) score += 0.75;
+  if (decl.hygieneKitchenProtocol) score += 0.5;
+  return Math.round(score * 10) / 10;
+}
+
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { sellerId, orderId, score, comment } = req.body;
@@ -65,10 +83,33 @@ router.get("/seller/:sellerId", async (req, res) => {
       totalCount: count(hygieneRatingsTable.id),
     }).from(hygieneRatingsTable).where(eq(hygieneRatingsTable.sellerId, sellerId));
 
+    const [seller] = await db.select({
+      hygienePlatformScore: usersTable.hygienePlatformScore,
+      hygieneWearsGloves: usersTable.hygieneWearsGloves,
+      hygieneWearsBone: usersTable.hygieneWearsBone,
+      hygieneHasHealthCert: usersTable.hygieneHasHealthCert,
+      hygieneWashesHands: usersTable.hygieneWashesHands,
+      hygieneSingleUsePackaging: usersTable.hygieneSingleUsePackaging,
+      hygieneKitchenProtocol: usersTable.hygieneKitchenProtocol,
+      hygieneNote: usersTable.hygieneNote,
+      hygieneUpdatedAt: usersTable.hygieneUpdatedAt,
+    }).from(usersTable).where(eq(usersTable.id, sellerId)).limit(1);
+
     res.json({
       sellerId,
       avgScore: result?.avgScore ? parseFloat(result.avgScore as string) : null,
       totalCount: Number(result?.totalCount ?? 0),
+      platformScore: seller?.hygienePlatformScore ?? null,
+      declarations: seller ? {
+        wearsGloves: seller.hygieneWearsGloves,
+        wearsBone: seller.hygieneWearsBone,
+        hasHealthCert: seller.hygieneHasHealthCert,
+        washesHands: seller.hygieneWashesHands,
+        singleUsePackaging: seller.hygieneSingleUsePackaging,
+        kitchenProtocol: seller.hygieneKitchenProtocol,
+        note: seller.hygieneNote,
+        updatedAt: seller.hygieneUpdatedAt,
+      } : null,
     });
   } catch (err) {
     res.status(500).json({ error: "Sunucu hatası" });
@@ -84,6 +125,83 @@ router.get("/check/:orderId", requireAuth, async (req: AuthRequest, res) => {
       .limit(1);
     res.json({ rated: existing.length > 0 });
   } catch (err) {
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+router.get("/declaration", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const [seller] = await db.select({
+      hygieneWearsGloves: usersTable.hygieneWearsGloves,
+      hygieneWearsBone: usersTable.hygieneWearsBone,
+      hygieneHasHealthCert: usersTable.hygieneHasHealthCert,
+      hygieneWashesHands: usersTable.hygieneWashesHands,
+      hygieneSingleUsePackaging: usersTable.hygieneSingleUsePackaging,
+      hygieneKitchenProtocol: usersTable.hygieneKitchenProtocol,
+      hygieneNote: usersTable.hygieneNote,
+      hygienePlatformScore: usersTable.hygienePlatformScore,
+      hygieneUpdatedAt: usersTable.hygieneUpdatedAt,
+    }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+
+    if (!seller) {
+      res.status(404).json({ error: "Kullanıcı bulunamadı" });
+      return;
+    }
+
+    res.json({
+      wearsGloves: seller.hygieneWearsGloves,
+      wearsBone: seller.hygieneWearsBone,
+      hasHealthCert: seller.hygieneHasHealthCert,
+      washesHands: seller.hygieneWashesHands,
+      singleUsePackaging: seller.hygieneSingleUsePackaging,
+      kitchenProtocol: seller.hygieneKitchenProtocol,
+      note: seller.hygieneNote,
+      platformScore: seller.hygienePlatformScore,
+      updatedAt: seller.hygieneUpdatedAt,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+router.put("/declaration", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const {
+      wearsGloves = false,
+      wearsBone = false,
+      hasHealthCert = false,
+      washesHands = false,
+      singleUsePackaging = false,
+      kitchenProtocol = false,
+      note = null,
+    } = req.body;
+
+    const platformScore = computePlatformScore({
+      hygieneWearsGloves: !!wearsGloves,
+      hygieneWearsBone: !!wearsBone,
+      hygieneHasHealthCert: !!hasHealthCert,
+      hygieneWashesHands: !!washesHands,
+      hygieneSingleUsePackaging: !!singleUsePackaging,
+      hygieneKitchenProtocol: !!kitchenProtocol,
+    });
+
+    await db.update(usersTable).set({
+      hygieneWearsGloves: !!wearsGloves,
+      hygieneWearsBone: !!wearsBone,
+      hygieneHasHealthCert: !!hasHealthCert,
+      hygieneWashesHands: !!washesHands,
+      hygieneSingleUsePackaging: !!singleUsePackaging,
+      hygieneKitchenProtocol: !!kitchenProtocol,
+      hygieneNote: note ?? null,
+      hygienePlatformScore: platformScore,
+      hygieneUpdatedAt: new Date(),
+      updatedAt: new Date(),
+    }).where(eq(usersTable.id, req.userId!));
+
+    res.json({ platformScore });
+  } catch (err) {
+    req.log.error(err);
     res.status(500).json({ error: "Sunucu hatası" });
   }
 });
