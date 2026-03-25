@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, Platform, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useGetSellers } from "@workspace/api-client-react";
-import { AppHeader } from "@/components/ui/AppHeader";
 
 type Seller = {
   id: number;
@@ -66,11 +66,13 @@ function SellerCard({ seller, onPress }: { seller: Seller; onPress: () => void }
 }
 
 export default function ExploreScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Platform.OS === "web" ? 67 : insets.top;
+
   const { data: sellers, isLoading, refetch } = useGetSellers({});
 
   return (
-    <View style={styles.container}>
-      <AppHeader />
+    <View style={[styles.container, { paddingTop: topInset }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Satıcılar</Text>
         <Text style={styles.subtitle}>Yakınızdaki ev yemekçileri</Text>
