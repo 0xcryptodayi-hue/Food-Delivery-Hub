@@ -137,7 +137,7 @@ function OrderCard({ order, isSeller, onPress }: { order: Order; isSeller: boole
       onPress={onPress}
     >
       {/* Sol aksent çizgisi */}
-      <View style={[cardStyles.accentBar, { backgroundColor: meta.color }]} />
+      <View style={[cardStyles.accentBar, { backgroundColor: Colors.light.primary }]} />
 
       <View style={cardStyles.inner}>
         {/* Başlık satırı */}
