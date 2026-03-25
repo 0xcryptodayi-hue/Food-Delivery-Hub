@@ -3,7 +3,7 @@ import { pgTable, serial, integer, text, real, timestamp, boolean } from "drizzl
 export const adCampaignsTable = pgTable("ad_campaigns", {
   id: serial("id").primaryKey(),
   sellerId: integer("seller_id").notNull(),
-  productId: integer("product_id").notNull(),
+  productId: integer("product_id"),
   packageType: text("package_type").notNull(), // "starter" | "standard" | "premium"
   durationDays: integer("duration_days").notNull(),
   price: real("price").notNull(),

@@ -18,6 +18,7 @@ export const productsTable = pgTable("products", {
   reviewCount: integer("review_count").notNull().default(0),
   sellerId: integer("seller_id").notNull(),
   isSponsored: boolean("is_sponsored").notNull().default(false),
+  discountPercent: integer("discount_percent"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

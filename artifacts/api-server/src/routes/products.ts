@@ -79,6 +79,7 @@ router.get("/", optionalAuth, async (req: AuthRequest, res) => {
         sellerName: seller?.name ?? "Unknown", sellerAvatar: seller?.avatar ?? null,
         sellerRating: seller?.rating ?? null,
         isSponsored: p.isSponsored, isFavorited: favSet.has(p.id),
+        discountPercent: p.discountPercent ?? null,
         createdAt: p.createdAt.toISOString(),
       };
     });
@@ -115,6 +116,7 @@ router.get("/:id", optionalAuth, async (req: AuthRequest, res) => {
       sellerName: seller?.name ?? "Unknown", sellerAvatar: seller?.avatar ?? null,
       sellerRating: seller?.rating ?? null, sellerAddress: seller?.address ?? null,
       isSponsored: product.isSponsored, isFavorited, reviews: [],
+      discountPercent: product.discountPercent ?? null,
       createdAt: product.createdAt.toISOString(),
     });
   } catch (err) {
@@ -149,7 +151,7 @@ router.put("/:id", requireAuth, async (req: AuthRequest, res) => {
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id)).limit(1);
     if (!product || product.sellerId !== req.userId) { res.status(403).json({ error: "Forbidden" }); return; }
     const updates: Record<string, unknown> = {};
-    const fields = ["title", "description", "price", "imageUrl", "category", "portion", "dailyStock", "prepTime", "isAvailable"] as const;
+    const fields = ["title", "description", "price", "imageUrl", "category", "portion", "dailyStock", "prepTime", "isAvailable", "discountPercent"] as const;
     fields.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
     updates.updatedAt = new Date();
     const [updated] = await db.update(productsTable).set(updates as Partial<typeof productsTable.$inferInsert>).where(eq(productsTable.id, id)).returning();

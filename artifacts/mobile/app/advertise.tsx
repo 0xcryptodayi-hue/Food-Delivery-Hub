@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Platform, ActivityIndicator, Alert, Switch, Modal,
+  Platform, ActivityIndicator, Alert, Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -22,16 +22,8 @@ interface AdPackage {
   popular?: boolean;
 }
 
-interface Product {
-  id: number;
-  title: string;
-  isSponsored: boolean;
-}
-
 interface Campaign {
   id: number;
-  productId: number;
-  productTitle: string;
   packageType: string;
   durationDays: number;
   price: number;
@@ -47,16 +39,13 @@ export default function AdvertiseScreen() {
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const [packages, setPackages] = useState<AdPackage[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
   const [tab, setTab] = useState<"new" | "campaigns">("new");
 
   useEffect(() => {
@@ -69,17 +58,12 @@ export default function AdvertiseScreen() {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const [pkgRes, prodRes, campRes] = await Promise.all([
+      const [pkgRes, campRes] = await Promise.all([
         fetch(`${API_BASE}/ads/packages`),
-        fetch(`${API_BASE}/products?sellerId=${user?.id}&limit=50`, { headers }),
         fetch(`${API_BASE}/ads/my-campaigns`, { headers }),
       ]);
 
       if (pkgRes.ok) setPackages(await pkgRes.json());
-      if (prodRes.ok) {
-        const data = await prodRes.json();
-        setProducts(data.products ?? []);
-      }
       if (campRes.ok) setCampaigns(await campRes.json());
     } catch {
     } finally {
@@ -87,13 +71,11 @@ export default function AdvertiseScreen() {
     }
   };
 
+  const hasActiveCampaign = campaigns.some(c => c.status === "active");
+
   const handleSubmit = async () => {
     if (!selectedPackage) {
       Alert.alert("Hata", "Lütfen bir kampanya paketi seçin");
-      return;
-    }
-    if (!selectedProduct) {
-      Alert.alert("Hata", "Lütfen öne çıkarmak istediğiniz ürünü seçin");
       return;
     }
     if (!agreedToTerms) {
@@ -106,7 +88,7 @@ export default function AdvertiseScreen() {
 
     Alert.alert(
       "Kampanya Başlat",
-      `${pkg.name} paketi ₺${pkg.price} tutarında olup ${pkg.durationDays} gün boyunca ürününüzü öne çıkaracaktır.\n\nDevam etmek istiyor musunuz?`,
+      `${pkg.name} paketi ₺${pkg.price} tutarında olup ${pkg.durationDays} gün boyunca tüm ürünlerinizi öne çıkaracaktır.\n\nDevam etmek istiyor musunuz?`,
       [
         { text: "İptal", style: "cancel" },
         {
@@ -121,7 +103,6 @@ export default function AdvertiseScreen() {
                   Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                  productId: selectedProduct,
                   packageType: selectedPackage,
                   note,
                   agreedToTerms: true,
@@ -133,11 +114,10 @@ export default function AdvertiseScreen() {
               } else {
                 Alert.alert(
                   "Kampanya Başlatıldı!",
-                  "Ürününüz artık öne çıkanlar arasında görünecek.",
+                  "Tüm ürünleriniz artık öne çıkanlar arasında görünecek.",
                   [{ text: "Tamam", onPress: () => { fetchData(); setTab("campaigns"); } }]
                 );
                 setSelectedPackage(null);
-                setSelectedProduct(null);
                 setNote("");
                 setAgreedToTerms(false);
               }
@@ -152,7 +132,6 @@ export default function AdvertiseScreen() {
     );
   };
 
-  const selectedProductName = products.find(p => p.id === selectedProduct)?.title;
   const selectedPkg = packages.find(p => p.id === selectedPackage);
 
   const statusLabel = (s: string) => {
@@ -220,12 +199,19 @@ export default function AdvertiseScreen() {
               <Feather name="trending-up" size={22} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.infoBannerTitle}>Öne Çıkan Satıcı Olun</Text>
+              <Text style={styles.infoBannerTitle}>Tüm Mağazanızı Öne Çıkarın</Text>
               <Text style={styles.infoBannerDesc}>
-                Ürününüzü listenin üstünde gösterin, daha fazla müşteriye ulaşın
+                Kampanya başlattığınızda mağazanızdaki tüm ürünler listenin üstünde görünür
               </Text>
             </View>
           </View>
+
+          {hasActiveCampaign && (
+            <View style={[styles.infoBanner, { backgroundColor: Colors.light.success, marginBottom: 0, marginTop: 0, marginHorizontal: 20, marginBottom: 20 }]}>
+              <Feather name="check-circle" size={20} color="#fff" />
+              <Text style={[styles.infoBannerDesc, { flex: 1 }]}>Aktif bir kampanyanız bulunuyor. Tüm ürünleriniz öne çıkarılmış.</Text>
+            </View>
+          )}
 
           {/* Package Selection */}
           <View style={styles.section}>
@@ -251,7 +237,7 @@ export default function AdvertiseScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.packageName}>{pkg.name}</Text>
-                    <Text style={styles.packageDuration}>{pkg.durationDays} gün</Text>
+                    <Text style={styles.packageDuration}>{pkg.durationDays} gün · Tüm ürünler</Text>
                   </View>
                   <View style={styles.packagePriceBox}>
                     <Text style={[styles.packagePrice, { color: pkg.color }]}>₺{pkg.price}</Text>
@@ -275,24 +261,6 @@ export default function AdvertiseScreen() {
                 </View>
               </Pressable>
             ))}
-          </View>
-
-          {/* Product Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Öne Çıkarmak İstediğiniz Ürün</Text>
-            <Pressable
-              style={({ pressed }) => [styles.selectBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => setShowProductModal(true)}
-            >
-              <Feather name="package" size={18} color={selectedProduct ? Colors.light.primary : Colors.light.textMuted} />
-              <Text style={[styles.selectBtnText, selectedProduct && { color: Colors.light.text }]}>
-                {selectedProductName ?? "Ürün seçin..."}
-              </Text>
-              <Feather name="chevron-down" size={18} color={Colors.light.textMuted} />
-            </Pressable>
-            {products.length === 0 && (
-              <Text style={styles.hintText}>Önce ürün eklemeniz gerekiyor.</Text>
-            )}
           </View>
 
           {/* Terms */}
@@ -320,8 +288,8 @@ export default function AdvertiseScreen() {
             </Pressable>
           </View>
 
-          {/* Summary + Submit */}
-          {selectedPkg && selectedProduct && (
+          {/* Summary */}
+          {selectedPkg && (
             <View style={styles.section}>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryTitle}>Kampanya Özeti</Text>
@@ -334,8 +302,8 @@ export default function AdvertiseScreen() {
                   <Text style={styles.summaryValue}>{selectedPkg.durationDays} gün</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Ürün</Text>
-                  <Text style={styles.summaryValue} numberOfLines={1}>{selectedProductName}</Text>
+                  <Text style={styles.summaryLabel}>Kapsam</Text>
+                  <Text style={styles.summaryValue}>Tüm ürünleriniz</Text>
                 </View>
                 <View style={[styles.summaryRow, { marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.light.borderLight }]}>
                   <Text style={[styles.summaryLabel, { fontFamily: "Inter_700Bold", fontSize: 15 }]}>Toplam</Text>
@@ -349,16 +317,18 @@ export default function AdvertiseScreen() {
 
           <View style={{ paddingHorizontal: 20 }}>
             <Pressable
-              style={({ pressed }) => [styles.submitBtn, (submitting || !agreedToTerms) && { opacity: 0.6 }, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.submitBtn, (submitting || !agreedToTerms || hasActiveCampaign) && { opacity: 0.6 }, pressed && { opacity: 0.85 }]}
               onPress={handleSubmit}
-              disabled={submitting || !agreedToTerms}
+              disabled={submitting || !agreedToTerms || hasActiveCampaign}
             >
               {submitting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
                   <Feather name="zap" size={18} color="#fff" />
-                  <Text style={styles.submitBtnText}>Kampanyayı Başlat</Text>
+                  <Text style={styles.submitBtnText}>
+                    {hasActiveCampaign ? "Aktif Kampanya Var" : "Kampanyayı Başlat"}
+                  </Text>
                 </>
               )}
             </Pressable>
@@ -390,8 +360,8 @@ export default function AdvertiseScreen() {
                       <Feather name="zap" size={18} color={pkg?.color ?? Colors.light.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.campaignProduct} numberOfLines={1}>{camp.productTitle}</Text>
-                      <Text style={styles.campaignPackage}>{pkg?.name ?? camp.packageType} · {camp.durationDays} gün</Text>
+                      <Text style={styles.campaignProduct}>{pkg?.name ?? camp.packageType} Paketi</Text>
+                      <Text style={styles.campaignPackage}>Tüm ürünler · {camp.durationDays} gün</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: color + "18" }]}>
                       <Text style={[styles.statusText, { color }]}>{label}</Text>
@@ -421,51 +391,6 @@ export default function AdvertiseScreen() {
           )}
         </ScrollView>
       )}
-
-      {/* Product Picker Modal */}
-      <Modal visible={showProductModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modal, { paddingTop: topInset + 16 }]}>
-          <View style={styles.modalHeader}>
-            <Pressable onPress={() => setShowProductModal(false)} hitSlop={8}>
-              <Feather name="x" size={22} color={Colors.light.text} />
-            </Pressable>
-            <Text style={styles.modalTitle}>Ürün Seçin</Text>
-            <View style={{ width: 24 }} />
-          </View>
-          <ScrollView contentContainerStyle={{ padding: 20, gap: 10 }}>
-            {products.length === 0 ? (
-              <Text style={[styles.hintText, { textAlign: "center", marginTop: 40 }]}>
-                Henüz ürününüz yok. Önce ürün ekleyin.
-              </Text>
-            ) : (
-              products.map((p) => (
-                <Pressable
-                  key={p.id}
-                  style={({ pressed }) => [
-                    styles.productRow,
-                    selectedProduct === p.id && styles.productRowActive,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                  onPress={() => { setSelectedProduct(p.id); setShowProductModal(false); }}
-                >
-                  <View style={styles.productDot}>
-                    <Feather name="package" size={16} color={selectedProduct === p.id ? Colors.light.primary : Colors.light.textMuted} />
-                  </View>
-                  <Text style={[styles.productRowText, selectedProduct === p.id && { color: Colors.light.primary, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-                    {p.title}
-                  </Text>
-                  {p.isSponsored && (
-                    <View style={styles.sponsoredBadge}>
-                      <Text style={styles.sponsoredBadgeText}>Öne Çıkan</Text>
-                    </View>
-                  )}
-                  {selectedProduct === p.id && <Feather name="check" size={18} color={Colors.light.primary} />}
-                </Pressable>
-              ))
-            )}
-          </ScrollView>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -496,7 +421,7 @@ const styles = StyleSheet.create({
   },
   infoBannerIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
   infoBannerTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 3 },
-  infoBannerDesc: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.85)", lineHeight: 17 },
+  infoBannerDesc: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.9)", lineHeight: 17 },
 
   section: { paddingHorizontal: 20, marginBottom: 20 },
   sectionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 12 },
@@ -520,14 +445,6 @@ const styles = StyleSheet.create({
   featureRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   featureText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary },
 
-  selectBtn: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.light.surface, borderRadius: 14, paddingHorizontal: 16, height: 52,
-    borderWidth: 1, borderColor: Colors.light.border,
-  },
-  selectBtnText: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
-  hintText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 6 },
-
   termsCard: {
     flexDirection: "row", gap: 10, alignItems: "flex-start",
     backgroundColor: Colors.light.backgroundSecondary, borderRadius: 12, padding: 14, marginBottom: 14,
@@ -540,7 +457,7 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 12 },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 3 },
   summaryLabel: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary },
-  summaryValue: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.light.text, maxWidth: "60%", textAlign: "right" },
+  summaryValue: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.light.text },
 
   submitBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
@@ -567,18 +484,4 @@ const styles = StyleSheet.create({
   campaignMetaText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
   campaignMetaSep: { fontSize: 12, color: Colors.light.textMuted },
   campaignPrice: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.light.primary },
-
-  modal: { flex: 1, backgroundColor: Colors.light.background },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingBottom: 16 },
-  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
-  productRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.light.surface, borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: Colors.light.border,
-  },
-  productRowActive: { borderColor: Colors.light.primary, backgroundColor: Colors.light.primary + "08" },
-  productDot: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.light.backgroundSecondary, alignItems: "center", justifyContent: "center" },
-  productRowText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.light.text },
-  sponsoredBadge: { backgroundColor: Colors.light.sponsored + "18", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  sponsoredBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.light.sponsored },
 });

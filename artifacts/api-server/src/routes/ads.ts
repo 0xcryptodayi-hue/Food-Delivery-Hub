@@ -13,7 +13,7 @@ export const AD_PACKAGES = [
     price: 199,
     description: "7 gün öne çıkma",
     features: [
-      "Ürününüz listenin üstünde gösterilir",
+      "Tüm ürünleriniz listenin üstünde gösterilir",
       "Öne Çıkan rozeti",
       "7 gün süre",
     ],
@@ -26,7 +26,7 @@ export const AD_PACKAGES = [
     price: 399,
     description: "14 gün öne çıkma",
     features: [
-      "Ürününüz listenin üstünde gösterilir",
+      "Tüm ürünleriniz listenin üstünde gösterilir",
       "Öne Çıkan rozeti",
       "14 gün süre",
       "Kategori sayfasında vurgulama",
@@ -41,7 +41,7 @@ export const AD_PACKAGES = [
     price: 799,
     description: "30 gün öne çıkma",
     features: [
-      "Ürününüz listenin üstünde gösterilir",
+      "Tüm ürünleriniz listenin üstünde gösterilir",
       "Öne Çıkan rozeti",
       "30 gün süre",
       "Kategori sayfasında vurgulama",
@@ -63,18 +63,7 @@ router.get("/my-campaigns", requireAuth, async (req: AuthRequest, res) => {
       .where(eq(adCampaignsTable.sellerId, req.userId!))
       .orderBy(desc(adCampaignsTable.createdAt));
 
-    const enriched = await Promise.all(
-      campaigns.map(async (c) => {
-        const [product] = await db
-          .select({ title: productsTable.title, imageUrl: productsTable.imageUrl })
-          .from(productsTable)
-          .where(eq(productsTable.id, c.productId))
-          .limit(1);
-        return { ...c, productTitle: product?.title ?? "Ürün", productImage: product?.imageUrl ?? null };
-      })
-    );
-
-    res.json(enriched);
+    res.json(campaigns);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Server error" });
@@ -83,10 +72,10 @@ router.get("/my-campaigns", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/apply", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { productId, packageType, note, agreedToTerms } = req.body;
+    const { packageType, note, agreedToTerms } = req.body;
 
-    if (!productId || !packageType || !agreedToTerms) {
-      res.status(400).json({ error: "Ürün, paket ve kullanım koşulları onayı zorunludur" });
+    if (!packageType || !agreedToTerms) {
+      res.status(400).json({ error: "Paket seçimi ve kullanım koşulları onayı zorunludur" });
       return;
     }
 
@@ -96,30 +85,19 @@ router.post("/apply", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    const [product] = await db
-      .select()
-      .from(productsTable)
-      .where(and(eq(productsTable.id, parseInt(productId)), eq(productsTable.sellerId, req.userId!)))
-      .limit(1);
-
-    if (!product) {
-      res.status(403).json({ error: "Bu ürün size ait değil veya bulunamadı" });
-      return;
-    }
-
     const existing = await db
       .select()
       .from(adCampaignsTable)
       .where(
         and(
-          eq(adCampaignsTable.productId, parseInt(productId)),
+          eq(adCampaignsTable.sellerId, req.userId!),
           eq(adCampaignsTable.status, "active")
         )
       )
       .limit(1);
 
     if (existing.length > 0) {
-      res.status(400).json({ error: "Bu ürün zaten aktif bir kampanyaya sahip" });
+      res.status(400).json({ error: "Zaten aktif bir kampanyanız var" });
       return;
     }
 
@@ -130,7 +108,6 @@ router.post("/apply", requireAuth, async (req: AuthRequest, res) => {
       .insert(adCampaignsTable)
       .values({
         sellerId: req.userId!,
-        productId: parseInt(productId),
         packageType,
         durationDays: pkg.durationDays,
         price: pkg.price,
@@ -142,12 +119,13 @@ router.post("/apply", requireAuth, async (req: AuthRequest, res) => {
       })
       .returning();
 
+    // Mark ALL seller's products as sponsored
     await db
       .update(productsTable)
       .set({ isSponsored: true, updatedAt: new Date() })
-      .where(eq(productsTable.id, parseInt(productId)));
+      .where(eq(productsTable.sellerId, req.userId!));
 
-    res.status(201).json({ campaign, message: "Kampanyanız başarıyla başlatıldı!" });
+    res.status(201).json({ campaign, message: "Kampanyanız başarıyla başlatıldı! Tüm ürünleriniz öne çıkanlar arasında gösterilecek." });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Server error" });

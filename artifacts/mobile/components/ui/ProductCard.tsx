@@ -36,6 +36,7 @@ type ProductCardProps = {
   remainingStock: number;
   isSponsored: boolean;
   isFavorited: boolean;
+  discountPercent?: number | null;
   onPress: () => void;
   onFavoritePress?: () => void;
   onAddToCart?: () => void;
@@ -43,10 +44,14 @@ type ProductCardProps = {
 
 export function ProductCard({
   title, description, price, imageUrl, category, sellerName, rating, reviewCount,
-  prepTime, remainingStock, isSponsored, isFavorited, onPress, onFavoritePress, onAddToCart,
+  prepTime, remainingStock, isSponsored, isFavorited, discountPercent,
+  onPress, onFavoritePress, onAddToCart,
 }: ProductCardProps) {
   const emoji = CATEGORY_EMOJI[category] ?? "🍲";
   const bgColor = CATEGORY_BG[category] ?? "#FFF3E0";
+
+  const hasDiscount = discountPercent != null && discountPercent > 0;
+  const discountedPrice = hasDiscount ? price * (1 - discountPercent! / 100) : price;
 
   return (
     <Pressable
@@ -67,6 +72,11 @@ export function ProductCard({
             <View style={styles.sponsoredBadge}>
               <Feather name="zap" size={10} color="#fff" />
               <Text style={styles.sponsoredText}>Öne Çıkan</Text>
+            </View>
+          )}
+          {hasDiscount && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>%{discountPercent} İndirim</Text>
             </View>
           )}
           {remainingStock <= 3 && remainingStock > 0 && (
@@ -115,7 +125,14 @@ export function ProductCard({
           </View>
 
           <View style={styles.priceRow}>
-            <Text style={styles.price} numberOfLines={1}>₺{price.toFixed(0)}</Text>
+            <View style={styles.priceStack}>
+              {hasDiscount && (
+                <Text style={styles.originalPrice}>₺{price.toFixed(0)}</Text>
+              )}
+              <Text style={[styles.price, hasDiscount && styles.priceDiscounted]} numberOfLines={1}>
+                ₺{discountedPrice.toFixed(0)}
+              </Text>
+            </View>
             {onAddToCart && remainingStock > 0 && (
               <Pressable style={styles.addBtn} onPress={e => { e.stopPropagation?.(); onAddToCart(); }} hitSlop={6}>
                 <Feather name="plus" size={18} color="#fff" />
@@ -152,7 +169,7 @@ const styles = StyleSheet.create({
   imagePlaceholderEmoji: { fontSize: 56 },
   overlayRow: {
     position: "absolute", top: 12, left: 12,
-    flexDirection: "row", gap: 6, flexWrap: "wrap", maxWidth: "70%",
+    flexDirection: "row", gap: 6, flexWrap: "wrap", maxWidth: "85%",
   },
   sponsoredBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
@@ -160,6 +177,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
   },
   sponsoredText: { color: "#fff", fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  discountBadge: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "#E53935",
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  discountText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
   stockBadge: {
     backgroundColor: Colors.light.accent,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
@@ -196,7 +219,13 @@ const styles = StyleSheet.create({
   timeChip: { flexDirection: "row", alignItems: "center", gap: 3 },
   timeText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
   priceRow: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
+  priceStack: { alignItems: "flex-end" },
+  originalPrice: {
+    fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted,
+    textDecorationLine: "line-through",
+  },
   price: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.primary },
+  priceDiscounted: { color: "#E53935" },
   addBtn: {
     backgroundColor: Colors.light.primary, borderRadius: 20,
     width: 36, height: 36, alignItems: "center", justifyContent: "center",
