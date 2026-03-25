@@ -212,11 +212,15 @@ export default function HomeScreen() {
 
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: topInset + 10 }]}>
-        <Image
-          source={require("@/assets/images/logo.png")}
-          style={styles.headerLogo}
-          resizeMode="contain"
-        />
+        <View style={styles.headerLogoShadow}>
+          <View style={styles.headerLogoWrap}>
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
         <View style={styles.headerActions}>
           {/* Bildirim */}
           <Pressable
@@ -369,7 +373,22 @@ const styles = StyleSheet.create({
       web: { boxShadow: "0 3px 10px rgba(160,110,30,0.13)" },
     }),
   },
-  headerLogo: { width: 160, height: 68 },
+  headerLogoShadow: {
+    borderRadius: 30,
+    backgroundColor: "#FFFFFF",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(180,120,20,0.25)", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 4 },
+      web: { boxShadow: "0 2px 10px rgba(180,120,20,0.2)" },
+    }),
+  },
+  headerLogoWrap: {
+    width: 148, height: 60,
+    borderRadius: 30,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+  },
+  headerLogo: { width: 148, height: 60 },
   headerActions: { flexDirection: "row", gap: 4, alignItems: "center" },
   headerIconBtn: {
     width: 42, height: 42, borderRadius: 21,
