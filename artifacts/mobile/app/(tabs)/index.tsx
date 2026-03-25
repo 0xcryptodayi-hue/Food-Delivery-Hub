@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, TextInput,
-  RefreshControl, Platform, Modal, Animated, ScrollView, TouchableOpacity, Image,
+  RefreshControl, Platform, Modal, Animated, ScrollView, TouchableOpacity, Image, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -485,6 +485,16 @@ function CategoryModal({
   );
 }
 
+type Seller = {
+  id: number;
+  name: string;
+  avatar?: string | null;
+  rating?: number | null;
+  reviewCount: number;
+  address?: string | null;
+  productCount: number;
+};
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -495,6 +505,9 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [bestSellers, setBestSellers] = useState<BestSeller[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [sellersLoading, setSellersLoading] = useState(false);
+  const sellerDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, isLoading, refetch } = useGetProducts({
     search: search || undefined,
@@ -513,6 +526,22 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => { fetchBestSellers(); }, [fetchBestSellers]);
+
+  // Satıcı araması — debounced
+  useEffect(() => {
+    if (sellerDebounce.current) clearTimeout(sellerDebounce.current);
+    if (!search.trim()) { setSellers([]); return; }
+    sellerDebounce.current = setTimeout(async () => {
+      setSellersLoading(true);
+      try {
+        const res = await fetch(`${getBaseUrl()}/api/sellers?search=${encodeURIComponent(search)}`);
+        if (res.ok) setSellers(await res.json());
+        else setSellers([]);
+      } catch { setSellers([]); }
+      finally { setSellersLoading(false); }
+    }, 350);
+    return () => { if (sellerDebounce.current) clearTimeout(sellerDebounce.current); };
+  }, [search]);
 
   const favoriteIds = new Set((favorites ?? []).map((f: { id: number }) => f.id));
   const products = (data?.products ?? []) as Product[];
@@ -559,13 +588,24 @@ export default function HomeScreen() {
 
       {/* ── Arama Barı (header altında) ── */}
       <View style={styles.searchBarWrap}>
-        <Pressable
-          style={styles.searchBar}
-          onPress={() => router.push("/search")}
-        >
+        <View style={styles.searchBar}>
           <Feather name="search" size={16} color={Colors.light.textMuted} />
-          <Text style={styles.searchPlaceholder}>Yemek veya satıcı ara...</Text>
-        </Pressable>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Yemek veya satıcı ara..."
+            placeholderTextColor={Colors.light.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+          />
+          {sellersLoading || (isLoading && search.length > 0) ? (
+            <ActivityIndicator size="small" color={Colors.light.primary} />
+          ) : search.length > 0 ? (
+            <Pressable onPress={() => setSearch("")} hitSlop={10}>
+              <Feather name="x-circle" size={15} color={Colors.light.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       {/* ── Active filter pill ── */}
@@ -628,11 +668,46 @@ export default function HomeScreen() {
                 </>
               )}
 
+              {/* Satıcı sonuçları — sadece arama varken */}
+              {search.trim().length > 0 && sellers.length > 0 && (
+                <View style={styles.sellerSection}>
+                  <Text style={styles.sellerSectionTitle}>Satıcılar</Text>
+                  {sellers.map(seller => (
+                    <Pressable
+                      key={seller.id}
+                      style={({ pressed }) => [styles.sellerCard, pressed && { opacity: 0.88 }]}
+                      onPress={() => router.push({ pathname: "/seller/[id]", params: { id: seller.id } })}
+                    >
+                      <View style={styles.sellerAvatar}>
+                        {seller.avatar ? (
+                          <Image source={{ uri: seller.avatar }} style={styles.sellerAvatarImg} />
+                        ) : (
+                          <Text style={styles.sellerAvatarText}>{seller.name[0]?.toUpperCase()}</Text>
+                        )}
+                      </View>
+                      <View style={styles.sellerCardInfo}>
+                        <Text style={styles.sellerCardName}>{seller.name}</Text>
+                        <View style={styles.sellerCardMeta}>
+                          {seller.rating != null && (
+                            <Text style={styles.sellerCardRating}>★ {seller.rating.toFixed(1)}</Text>
+                          )}
+                          {seller.address ? (
+                            <Text style={styles.sellerCardAddress} numberOfLines={1}>· {seller.address}</Text>
+                          ) : null}
+                          <Text style={styles.sellerCardCount}>{seller.productCount} ürün</Text>
+                        </View>
+                      </View>
+                      <Feather name="chevron-right" size={16} color={Colors.light.textMuted} />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
               {/* Bölüm başlığı */}
               {products.length > 0 && (
                 <View style={styles.listHeader}>
                   <Text style={styles.resultCount}>
-                    {selectedCategory === "all" ? "Tüm Yemekler" : activeCat?.name}
+                    {search ? "Yemekler" : selectedCategory === "all" ? "Tüm Yemekler" : activeCat?.name}
                   </Text>
                   <Text style={styles.resultCountSub}>{products.length} seçenek</Text>
                 </View>
@@ -690,10 +765,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1, fontFamily: "Inter_400Regular",
     fontSize: 14, color: Colors.light.text,
-  },
-  searchPlaceholder: {
-    flex: 1, fontFamily: "Inter_400Regular",
-    fontSize: 14, color: Colors.light.textMuted,
   },
 
   headerActions: { flexDirection: "row", gap: 2, alignItems: "center" },
@@ -810,4 +881,31 @@ const styles = StyleSheet.create({
   subcatText: {
     fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary,
   },
+
+  /* Seller search results */
+  sellerSection: { paddingHorizontal: 4, marginBottom: 4 },
+  sellerSectionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 8 },
+  sellerCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: Colors.light.surface, borderRadius: 14,
+    padding: 12, marginBottom: 8,
+    ...Platform.select({
+      ios: { shadowColor: "rgba(0,0,0,0.08)", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 6 },
+      android: { elevation: 1 },
+      web: { boxShadow: "0 1px 6px rgba(0,0,0,0.08)" },
+    }),
+  },
+  sellerAvatar: {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: Colors.light.primary + "20",
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
+  },
+  sellerAvatarImg: { width: 46, height: 46, borderRadius: 23 },
+  sellerAvatarText: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.primary },
+  sellerCardInfo: { flex: 1 },
+  sellerCardName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 3 },
+  sellerCardMeta: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  sellerCardRating: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#F59E0B" },
+  sellerCardAddress: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, flexShrink: 1 },
+  sellerCardCount: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.light.primary },
 });
