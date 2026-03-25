@@ -385,10 +385,12 @@ const styles = StyleSheet.create({
 
   /* Logo */
   headerLogoWrap: {
-    width: 54, height: 54,
-    alignItems: "center", justifyContent: "center",
+    width: 58, height: 60,
+    overflow: "hidden",
+    alignItems: "flex-start",
+    justifyContent: "center",
   },
-  headerLogo: { width: 54, height: 54 },
+  headerLogo: { width: 116, height: 60 },
 
   /* Brand */
   headerBrand: {
