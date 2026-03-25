@@ -311,7 +311,6 @@ function BestSellersSection({ products, onProductPress }: { products: BestSeller
             <Text style={bsStyles.freeBadgeText}>Ücretsiz</Text>
           </View>
         </View>
-        <Text style={bsStyles.sectionSub}>Müşterilerin en çok tercih ettiği yemekler</Text>
       </View>
       <ScrollView
         horizontal
