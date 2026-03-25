@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, TextInput,
-  RefreshControl, Platform, Modal, Animated, ScrollView, TouchableOpacity, Image, ActivityIndicator,
+  RefreshControl, Platform, Modal, Animated, ScrollView, TouchableOpacity, Image, ActivityIndicator, PanResponder,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -385,12 +385,14 @@ function CategoryModal({
   onClose: () => void;
 }) {
   const slideAnim = useRef(new Animated.Value(500)).current;
+  const dragAnim = useRef(new Animated.Value(0)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (visible) {
+      dragAnim.setValue(0);
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
         Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
@@ -404,6 +406,29 @@ function CategoryModal({
     }
   }, [visible]);
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 4,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) dragAnim.setValue(g.dy);
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80 || g.vy > 0.5) {
+          Animated.parallel([
+            Animated.timing(dragAnim, { toValue: 600, duration: 220, useNativeDriver: true }),
+            Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+          ]).start(() => {
+            dragAnim.setValue(0);
+            onClose();
+          });
+        } else {
+          Animated.spring(dragAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 260 }).start();
+        }
+      },
+    })
+  ).current;
+
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Animated.View style={[styles.backdrop, { opacity: backdropAnim }]}>
@@ -414,10 +439,12 @@ function CategoryModal({
         style={[
           styles.sheet,
           { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 16 },
-          { transform: [{ translateY: slideAnim }] },
+          { transform: [{ translateY: Animated.add(slideAnim, dragAnim) }] },
         ]}
       >
-        <View style={styles.sheetHandle} />
+        <View style={styles.sheetHandleWrap} {...panResponder.panHandlers}>
+          <View style={styles.sheetHandle} />
+        </View>
 
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>Kategoriler</Text>
@@ -840,9 +867,13 @@ const styles = StyleSheet.create({
       android: { elevation: 20 },
     }),
   },
+  sheetHandleWrap: {
+    alignSelf: "stretch", alignItems: "center",
+    paddingVertical: 12,
+  },
   sheetHandle: {
-    alignSelf: "center", width: 40, height: 4,
-    borderRadius: 2, backgroundColor: Colors.light.border, marginBottom: 16,
+    width: 40, height: 4,
+    borderRadius: 2, backgroundColor: Colors.light.border,
   },
   sheetHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
