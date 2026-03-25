@@ -181,13 +181,13 @@ const styles = StyleSheet.create({
   emptyIconWrap: { position: "relative", marginBottom: 8 },
   emptyIconCircle: {
     width: 88, height: 88, borderRadius: 44,
-    backgroundColor: "#FFF7ED",
-    borderWidth: 2, borderColor: "#FED7AA",
+    backgroundColor: Colors.light.backgroundSecondary,
+    borderWidth: 2, borderColor: Colors.light.border,
     alignItems: "center", justifyContent: "center",
     ...Platform.select({
-      ios: { shadowColor: Colors.light.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 12 },
-      android: { elevation: 4 },
-      web: { boxShadow: "0 4px 16px rgba(232,101,26,0.18)" },
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12 },
+      android: { elevation: 2 },
+      web: { boxShadow: "0 4px 16px rgba(0,0,0,0.07)" },
     }),
   },
   emptyIconBadge: {
@@ -197,8 +197,8 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderColor: Colors.light.background,
   },
-  emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#C4521A" },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: "#D97706", textAlign: "center", lineHeight: 22 },
+  emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, textAlign: "center", lineHeight: 22 },
   emptyBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: Colors.light.primary,
