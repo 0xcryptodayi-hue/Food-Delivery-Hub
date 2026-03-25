@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, Platform,
-  TextInput, Alert, ActivityIndicator, ScrollView, Modal, Image,
+  TextInput, Alert, ActivityIndicator, ScrollView, Modal, Image, Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -14,6 +14,8 @@ import {
 } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 
+const API_BASE = getBaseUrl();
+
 const CATEGORIES = [
   { slug: "main-dish", name: "Ana Yemek" },
   { slug: "soup", name: "Çorba" },
@@ -24,6 +26,8 @@ const CATEGORIES = [
 ];
 
 const DISCOUNT_PRESETS = [0, 10, 15, 20, 25, 30, 40, 50];
+
+type Tab = "products" | "campaigns" | "ads";
 
 type ProductFormData = {
   title: string;
@@ -36,18 +40,90 @@ type ProductFormData = {
   imageUrl: string;
 };
 
+interface AdPackage {
+  id: string;
+  name: string;
+  durationDays: number;
+  price: number;
+  description: string;
+  features: string[];
+  color: string;
+  popular?: boolean;
+}
+
+interface AdCampaign {
+  id: number;
+  packageType: string;
+  durationDays: number;
+  price: number;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+}
+
+function StatCard({ icon, label, value, color, bg }: {
+  icon: string; label: string; value: string | number; color: string; bg: string;
+}) {
+  return (
+    <View style={[statStyles.card, { backgroundColor: bg }]}>
+      <View style={[statStyles.iconWrap, { backgroundColor: color + "20" }]}>
+        <Feather name={icon as "package"} size={16} color={color} />
+      </View>
+      <Text style={statStyles.value}>{value}</Text>
+      <Text style={statStyles.label}>{label}</Text>
+    </View>
+  );
+}
+
+const statStyles = StyleSheet.create({
+  card: {
+    flex: 1, borderRadius: 14, padding: 12, alignItems: "center", gap: 4,
+    minWidth: 80,
+  },
+  iconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center", marginBottom: 2 },
+  value: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  label: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, textAlign: "center" },
+});
+
+function FormField({ label, value, onChange, placeholder, multiline, keyboardType }: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder: string; multiline?: boolean; keyboardType?: "numeric" | "default";
+}) {
+  return (
+    <View style={formStyles.fieldGroup}>
+      <Text style={formStyles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={[formStyles.fieldInput, multiline && formStyles.fieldInputMultiline]}
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={Colors.light.textMuted}
+        multiline={multiline}
+        numberOfLines={multiline ? 3 : 1}
+        keyboardType={keyboardType ?? "default"}
+      />
+    </View>
+  );
+}
+
+const formStyles = StyleSheet.create({
+  fieldGroup: { marginBottom: 14 },
+  fieldLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 6 },
+  fieldInput: {
+    borderWidth: 1, borderColor: Colors.light.border, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11,
+    fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.text,
+    backgroundColor: Colors.light.surface,
+  },
+  fieldInputMultiline: { height: 80, textAlignVertical: "top" },
+});
+
 function ProductForm({
-  initial,
-  onSave,
-  onCancel,
-  loading,
-  token,
+  initial, onSave, onCancel, loading, token,
 }: {
-  initial?: ProductFormData;
-  onSave: (data: ProductFormData) => void;
-  onCancel: () => void;
-  loading: boolean;
-  token?: string;
+  initial?: ProductFormData; onSave: (data: ProductFormData) => void;
+  onCancel: () => void; loading: boolean; token?: string;
 }) {
   const [form, setForm] = useState<ProductFormData>(initial ?? {
     title: "", description: "", price: "",
@@ -65,58 +141,43 @@ function ProductForm({
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      mediaTypes: ["images"], allowsEditing: true, aspect: [4, 3], quality: 0.8,
     });
     if (result.canceled || !result.assets[0]) return;
-
     const asset = result.assets[0];
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("image", {
-        uri: asset.uri,
-        type: asset.mimeType ?? "image/jpeg",
-        name: asset.fileName ?? "product.jpg",
-      } as unknown as Blob);
-
-      const res = await fetch(`${getBaseUrl()}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      formData.append("image", { uri: asset.uri, type: asset.mimeType ?? "image/jpeg", name: asset.fileName ?? "product.jpg" } as unknown as Blob);
+      const res = await fetch(`${API_BASE}/api/upload`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
       if (!res.ok) throw new Error("Upload failed");
       const { url } = await res.json();
       set("imageUrl", url);
     } catch {
       Alert.alert("Hata", "Fotoğraf yüklenemedi. Lütfen tekrar deneyin.");
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
   return (
-    <ScrollView style={styles.formScroll} keyboardShouldPersistTaps="handled">
-      <Text style={styles.fieldLabel}>Ürün Fotoğrafı</Text>
-      <Pressable style={styles.imagePicker} onPress={pickImage} disabled={uploading}>
-        {uploading ? (
-          <ActivityIndicator color={Colors.light.primary} />
-        ) : form.imageUrl ? (
-          <Image source={{ uri: form.imageUrl }} style={styles.imagePreview} resizeMode="cover" />
-        ) : (
-          <View style={styles.imagePlaceholder}>
+    <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <Text style={formStyles.fieldLabel}>Ürün Fotoğrafı</Text>
+      <Pressable
+        style={[pStyles.imagePicker, form.imageUrl && { padding: 0 }]}
+        onPress={pickImage}
+        disabled={uploading}
+      >
+        {uploading ? <ActivityIndicator color={Colors.light.primary} /> :
+          form.imageUrl ? <Image source={{ uri: form.imageUrl }} style={pStyles.imagePreview} resizeMode="cover" /> :
+          <View style={pStyles.imagePlaceholder}>
             <Feather name="camera" size={28} color={Colors.light.textMuted} />
-            <Text style={styles.imagePlaceholderText}>Fotoğraf Ekle</Text>
-          </View>
-        )}
+            <Text style={pStyles.imagePlaceholderText}>Fotoğraf Ekle</Text>
+          </View>}
       </Pressable>
-      {form.imageUrl ? (
-        <Pressable onPress={() => set("imageUrl", "")} style={styles.removeImage}>
-          <Text style={styles.removeImageText}>Fotoğrafı Kaldır</Text>
+      {!!form.imageUrl && (
+        <Pressable onPress={() => set("imageUrl", "")} style={pStyles.removeImage}>
+          <Text style={pStyles.removeImageText}>Fotoğrafı Kaldır</Text>
         </Pressable>
-      ) : null}
+      )}
 
       <FormField label="Ürün Adı" value={form.title} onChange={v => set("title", v)} placeholder="Örn: Mercimek Çorbası" />
       <FormField label="Açıklama" value={form.description} onChange={v => set("description", v)} placeholder="Ürün açıklaması..." multiline />
@@ -125,55 +186,32 @@ function ProductForm({
       <FormField label="Günlük Stok" value={form.dailyStock} onChange={v => set("dailyStock", v)} placeholder="10" keyboardType="numeric" />
       <FormField label="Hazırlama Süresi (dk)" value={form.prepTime} onChange={v => set("prepTime", v)} placeholder="30" keyboardType="numeric" />
 
-      <Text style={styles.fieldLabel}>Kategori</Text>
-      <View style={styles.categoryGrid}>
+      <Text style={formStyles.fieldLabel}>Kategori</Text>
+      <View style={pStyles.categoryGrid}>
         {CATEGORIES.map(cat => (
           <Pressable
             key={cat.slug}
-            style={[styles.catChip, form.category === cat.slug && styles.catChipActive]}
+            style={[pStyles.catChip, form.category === cat.slug && pStyles.catChipActive]}
             onPress={() => set("category", cat.slug)}
           >
-            <Text style={[styles.catChipText, form.category === cat.slug && styles.catChipTextActive]}>
-              {cat.name}
-            </Text>
+            <Text style={[pStyles.catChipText, form.category === cat.slug && pStyles.catChipTextActive]}>{cat.name}</Text>
           </Pressable>
         ))}
       </View>
 
-      <View style={styles.formButtons}>
-        <Pressable style={styles.cancelBtn} onPress={onCancel}>
-          <Text style={styles.cancelBtnText}>İptal</Text>
+      <View style={pStyles.formButtons}>
+        <Pressable style={pStyles.cancelBtn} onPress={onCancel}>
+          <Text style={pStyles.cancelBtnText}>İptal</Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.9 }, (loading || uploading) && { opacity: 0.7 }]}
+          style={({ pressed }) => [pStyles.saveBtn, pressed && { opacity: 0.9 }, (loading || uploading) && { opacity: 0.7 }]}
           onPress={() => onSave(form)}
           disabled={loading || uploading}
         >
-          {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>Kaydet</Text>}
+          {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={pStyles.saveBtnText}>Kaydet</Text>}
         </Pressable>
       </View>
     </ScrollView>
-  );
-}
-
-function FormField({ label, value, onChange, placeholder, multiline, keyboardType }: {
-  label: string; value: string; onChange: (v: string) => void;
-  placeholder: string; multiline?: boolean; keyboardType?: "numeric" | "default";
-}) {
-  return (
-    <View style={styles.fieldGroup}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={Colors.light.textMuted}
-        multiline={multiline}
-        numberOfLines={multiline ? 3 : 1}
-        keyboardType={keyboardType ?? "default"}
-      />
-    </View>
   );
 }
 
@@ -181,6 +219,11 @@ export default function MyProductsScreen() {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const [activeTab, setActiveTab] = useState<Tab>("products");
+
+  // --- Product management ---
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<null | { id: number; data: ProductFormData }>(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -190,10 +233,37 @@ export default function MyProductsScreen() {
   const [discountInput, setDiscountInput] = useState("0");
   const [savingDiscount, setSavingDiscount] = useState(false);
 
-  const { data: products, isLoading, refetch } = useGetUserProducts(user?.id ?? 0, { query: { enabled: !!user?.isSeller && !!user?.id } });
+  const { data: products, isLoading: productsLoading, refetch } = useGetUserProducts(user?.id ?? 0, { query: { enabled: !!user?.isSeller && !!user?.id } });
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+
+  // --- Ads ---
+  const [adPackages, setAdPackages] = useState<AdPackage[]>([]);
+  const [adCampaigns, setAdCampaigns] = useState<AdCampaign[]>([]);
+  const [adLoading, setAdLoading] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [submittingAd, setSubmittingAd] = useState(false);
+  const [adSubTab, setAdSubTab] = useState<"new" | "my">("new");
+
+  const hasActiveCampaign = adCampaigns.some(c => c.status === "active");
+  const activeCampaign = adCampaigns.find(c => c.status === "active");
+
+  const fetchAdData = useCallback(async () => {
+    if (!token) return;
+    setAdLoading(true);
+    try {
+      const [pkgRes, campRes] = await Promise.all([
+        fetch(`${API_BASE}/api/ads/packages`),
+        fetch(`${API_BASE}/api/ads/my-campaigns`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (pkgRes.ok) setAdPackages(await pkgRes.json());
+      if (campRes.ok) setAdCampaigns(await campRes.json());
+    } catch { } finally { setAdLoading(false); }
+  }, [token]);
+
+  useEffect(() => { if (activeTab === "ads") fetchAdData(); }, [activeTab, fetchAdData]);
 
   const handleSave = async (form: ProductFormData) => {
     if (!form.title || !form.price) { Alert.alert("Hata", "Başlık ve fiyat zorunludur"); return; }
@@ -206,19 +276,14 @@ export default function MyProductsScreen() {
         prepTime: parseInt(form.prepTime) || 30,
         imageUrl: form.imageUrl || undefined,
       };
-      if (editProduct) {
-        await updateProduct.mutateAsync({ id: editProduct.id, data: body });
-      } else {
-        await createProduct.mutateAsync({ data: body });
-      }
+      if (editProduct) await updateProduct.mutateAsync({ id: editProduct.id, data: body });
+      else await createProduct.mutateAsync({ data: body });
       setShowModal(false);
       setEditProduct(null);
       refetch();
     } catch (err: unknown) {
       Alert.alert("Hata", err instanceof Error ? err.message : "Kaydedilemedi");
-    } finally {
-      setFormLoading(false);
-    }
+    } finally { setFormLoading(false); }
   };
 
   const handleDelete = (id: number, title: string) => {
@@ -227,10 +292,8 @@ export default function MyProductsScreen() {
       {
         text: "Sil", style: "destructive",
         onPress: async () => {
-          try {
-            await deleteProduct.mutateAsync({ id });
-            refetch();
-          } catch { Alert.alert("Hata", "Silinemedi"); }
+          try { await deleteProduct.mutateAsync({ id }); refetch(); }
+          catch { Alert.alert("Hata", "Silinemedi"); }
         },
       },
     ]);
@@ -251,7 +314,7 @@ export default function MyProductsScreen() {
     }
     setSavingDiscount(true);
     try {
-      const res = await fetch(`${getBaseUrl()}/api/products/${discountProduct.id}`, {
+      const res = await fetch(`${API_BASE}/api/products/${discountProduct.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ discountPercent: pct === 0 ? null : pct }),
@@ -259,137 +322,517 @@ export default function MyProductsScreen() {
       if (!res.ok) throw new Error("Güncelleme başarısız");
       setShowDiscountModal(false);
       refetch();
-      if (pct === 0) {
-        Alert.alert("İndirim Kaldırıldı", `"${discountProduct.title}" ürününden indirim kaldırıldı.`);
-      } else {
-        const discountedPrice = discountProduct.price * (1 - pct / 100);
-        Alert.alert("İndirim Uygulandı", `"${discountProduct.title}" ürününe %${pct} indirim uygulandı.\nYeni fiyat: ₺${discountedPrice.toFixed(0)}`);
-      }
+      Alert.alert(
+        pct === 0 ? "İndirim Kaldırıldı" : "İndirim Uygulandı",
+        pct === 0
+          ? `"${discountProduct.title}" ürününden indirim kaldırıldı.`
+          : `"${discountProduct.title}" ürününe %${pct} indirim uygulandı.\nYeni fiyat: ₺${(discountProduct.price * (1 - pct / 100)).toFixed(0)}`
+      );
     } catch {
       Alert.alert("Hata", "İndirim güncellenemedi");
-    } finally {
-      setSavingDiscount(false);
-    }
+    } finally { setSavingDiscount(false); }
+  };
+
+  const handleAdSubmit = async () => {
+    if (!selectedPackage) { Alert.alert("Hata", "Lütfen bir kampanya paketi seçin"); return; }
+    if (!agreedToTerms) { Alert.alert("Hata", "Kampanya koşullarını kabul etmeniz gerekmektedir"); return; }
+    const pkg = adPackages.find(p => p.id === selectedPackage);
+    if (!pkg) return;
+    Alert.alert(
+      "Kampanya Başlat",
+      `${pkg.name} paketi ₺${pkg.price} tutarında olup ${pkg.durationDays} gün boyunca tüm ürünlerinizi öne çıkaracaktır.\n\nDevam etmek istiyor musunuz?`,
+      [
+        { text: "İptal", style: "cancel" },
+        {
+          text: "Onayla",
+          onPress: async () => {
+            setSubmittingAd(true);
+            try {
+              const res = await fetch(`${API_BASE}/api/ads/apply`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ packageType: selectedPackage, agreedToTerms: true }),
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                Alert.alert("Hata", data.error ?? "Kampanya başlatılamadı");
+              } else {
+                Alert.alert("Kampanya Başlatıldı! 🎉", "Tüm ürünleriniz artık öne çıkanlar arasında görünecek.", [
+                  { text: "Tamam", onPress: () => { fetchAdData(); setAdSubTab("my"); } }
+                ]);
+                setSelectedPackage(null);
+                setAgreedToTerms(false);
+              }
+            } catch {
+              Alert.alert("Hata", "Bir sorun oluştu, lütfen tekrar deneyin");
+            } finally { setSubmittingAd(false); }
+          },
+        },
+      ]
+    );
+  };
+
+  const adStatusLabel = (s: string) => {
+    if (s === "active") return { label: "Aktif", color: Colors.light.success };
+    if (s === "pending") return { label: "Beklemede", color: Colors.light.warning };
+    if (s === "expired") return { label: "Sona Erdi", color: Colors.light.textMuted };
+    return { label: "İptal", color: Colors.light.accent };
   };
 
   if (!user?.isSeller) {
     return (
       <View style={[styles.centered, { paddingTop: topInset }]}>
-        <Text style={styles.errorText}>Sadece satıcılar bu sayfayı görebilir</Text>
-        <Pressable onPress={() => router.back()}><Text style={styles.backLink}>Geri Dön</Text></Pressable>
+        <Feather name="lock" size={48} color={Colors.light.textMuted} />
+        <Text style={styles.errorText}>Sadece satıcılar bu paneli kullanabilir</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backBtnText}>Geri Dön</Text>
+        </Pressable>
       </View>
     );
   }
 
-  const discountedPrice = discountProduct
-    ? discountProduct.price * (1 - parseInt(discountInput || "0") / 100)
-    : 0;
+  const totalProducts = products?.length ?? 0;
+  const activeProducts = products?.filter(p => (p.remainingStock ?? 0) > 0).length ?? 0;
+  const discountedProducts = products?.filter(p => p.discountPercent && p.discountPercent > 0).length ?? 0;
+  const discountedPrice = discountProduct ? discountProduct.price * (1 - parseInt(discountInput || "0") / 100) : 0;
 
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
+      {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable style={styles.iconBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={20} color={Colors.light.text} />
         </Pressable>
-        <Text style={styles.title}>Ürünlerim</Text>
-        <Pressable style={styles.addBtn} onPress={() => { setEditProduct(null); setShowModal(true); }}>
-          <Feather name="plus" size={20} color="#fff" />
-        </Pressable>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Mağaza Yönetimi</Text>
+          <View style={styles.liveIndicator}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>Canlı</Text>
+          </View>
+        </View>
+        {activeTab === "products" ? (
+          <Pressable style={styles.addBtn} onPress={() => { setEditProduct(null); setShowModal(true); }}>
+            <Feather name="plus" size={20} color="#fff" />
+          </Pressable>
+        ) : (
+          <Pressable style={styles.iconBtn} onPress={() => { refetch(); fetchAdData(); }}>
+            <Feather name="refresh-cw" size={16} color={Colors.light.text} />
+          </Pressable>
+        )}
       </View>
 
-      {isLoading ? (
-        <View style={{ paddingHorizontal: 20, gap: 10 }}>
-          {[1, 2].map(i => <View key={i} style={styles.skeleton} />)}
-        </View>
-      ) : (
-        <FlatList
-          data={products ?? []}
-          keyExtractor={item => String(item.id)}
-          renderItem={({ item }) => {
-            const hasDiscount = item.discountPercent != null && item.discountPercent > 0;
-            const discountedPriceDisplay = hasDiscount
-              ? item.price * (1 - item.discountPercent! / 100)
-              : null;
+      {/* Stats Strip */}
+      <View style={styles.statsStrip}>
+        <StatCard icon="package" label="Toplam" value={totalProducts} color={Colors.light.primary} bg={Colors.light.primary + "10"} />
+        <StatCard icon="check-circle" label="Aktif" value={activeProducts} color={Colors.light.success} bg={Colors.light.success + "10"} />
+        <StatCard icon="tag" label="İndirimli" value={discountedProducts} color="#E53935" bg="#E5393510" />
+        <StatCard icon="zap" label={hasActiveCampaign ? "Reklam ✓" : "Reklam"} value={hasActiveCampaign ? "Aktif" : "Yok"} color={Colors.light.sponsored} bg={Colors.light.sponsored + "10"} />
+      </View>
 
-            return (
-              <View style={styles.productItem}>
-                {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={styles.productThumb} />
-                ) : (
-                  <View style={[styles.productThumb, styles.productThumbEmpty]}>
-                    <Feather name="image" size={20} color={Colors.light.textMuted} />
-                  </View>
-                )}
-                <View style={styles.productInfo}>
-                  <View style={styles.productTitleRow}>
-                    <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
-                    {hasDiscount && (
-                      <View style={styles.discountChip}>
-                        <Text style={styles.discountChipText}>%{item.discountPercent}</Text>
+      {/* Tabs */}
+      <View style={styles.tabBar}>
+        {([
+          { id: "products", icon: "package", label: "Ürünlerim" },
+          { id: "campaigns", icon: "tag", label: "Kampanya" },
+          { id: "ads", icon: "zap", label: "Reklam" },
+        ] as { id: Tab; icon: string; label: string }[]).map(t => (
+          <Pressable key={t.id} style={[styles.tab, activeTab === t.id && styles.tabActive]} onPress={() => setActiveTab(t.id)}>
+            <Feather name={t.icon as "package"} size={15} color={activeTab === t.id ? Colors.light.primary : Colors.light.textMuted} />
+            <Text style={[styles.tabText, activeTab === t.id && styles.tabTextActive]}>{t.label}</Text>
+            {t.id === "ads" && hasActiveCampaign && <View style={styles.tabBadge} />}
+          </Pressable>
+        ))}
+      </View>
+
+      {/* ─── TAB: ÜRÜNLERIM ─── */}
+      {activeTab === "products" && (
+        productsLoading ? (
+          <View style={{ paddingHorizontal: 20, paddingTop: 12, gap: 10 }}>
+            {[1, 2, 3].map(i => <View key={i} style={styles.skeleton} />)}
+          </View>
+        ) : (
+          <FlatList
+            data={products ?? []}
+            keyExtractor={item => String(item.id)}
+            contentContainerStyle={{ padding: 16, paddingBottom: bottomInset + 40 }}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => {
+              const hasDiscount = item.discountPercent != null && item.discountPercent > 0;
+              const dp = hasDiscount ? item.price * (1 - item.discountPercent! / 100) : null;
+              const stockPct = item.dailyStock > 0 ? (item.remainingStock ?? 0) / item.dailyStock : 0;
+              const stockColor = stockPct > 0.5 ? Colors.light.success : stockPct > 0.2 ? Colors.light.warning : Colors.light.accent;
+
+              return (
+                <View style={styles.productCard}>
+                  <View style={styles.productCardTop}>
+                    {item.imageUrl ? (
+                      <Image source={{ uri: item.imageUrl }} style={styles.productThumb} />
+                    ) : (
+                      <View style={[styles.productThumb, styles.productThumbEmpty]}>
+                        <Feather name="image" size={22} color={Colors.light.textMuted} />
                       </View>
                     )}
+                    <View style={styles.productMeta}>
+                      <View style={styles.productTitleRow}>
+                        <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                        {hasDiscount && (
+                          <View style={styles.discountBadge}>
+                            <Text style={styles.discountBadgeText}>%{item.discountPercent}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.productCategory}>{CATEGORIES.find(c => c.slug === item.category)?.name ?? item.category}</Text>
+                      <View style={styles.priceRow}>
+                        {hasDiscount ? (
+                          <>
+                            <Text style={styles.priceOriginal}>₺{item.price}</Text>
+                            <Text style={styles.priceDiscounted}>₺{dp?.toFixed(0)}</Text>
+                          </>
+                        ) : (
+                          <Text style={styles.price}>₺{item.price}</Text>
+                        )}
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.productPriceRow}>
-                    {hasDiscount ? (
-                      <>
-                        <Text style={styles.productOriginalPrice}>₺{item.price}</Text>
-                        <Text style={styles.productDiscountedPrice}>₺{discountedPriceDisplay?.toFixed(0)}</Text>
-                      </>
-                    ) : (
-                      <Text style={styles.productMeta}>₺{item.price}</Text>
-                    )}
-                    <Text style={styles.productStock}> · {item.remainingStock}/{item.dailyStock} stok</Text>
+
+                  {/* Stock bar */}
+                  <View style={styles.stockSection}>
+                    <View style={styles.stockLabelRow}>
+                      <Text style={styles.stockLabel}>Stok</Text>
+                      <Text style={[styles.stockCount, { color: stockColor }]}>{item.remainingStock}/{item.dailyStock}</Text>
+                    </View>
+                    <View style={styles.stockBar}>
+                      <View style={[styles.stockBarFill, { width: `${Math.max(3, stockPct * 100)}%` as any, backgroundColor: stockColor }]} />
+                    </View>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.productCardActions}>
+                    <Pressable
+                      style={[styles.actionChip, { backgroundColor: "#E5393512", borderColor: "#E5393530" }]}
+                      onPress={() => openDiscountModal(item)}
+                    >
+                      <Feather name="tag" size={13} color="#E53935" />
+                      <Text style={[styles.actionChipText, { color: "#E53935" }]}>
+                        {hasDiscount ? "İndirimi Düzenle" : "İndirim Ekle"}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[styles.actionChip, { backgroundColor: Colors.light.primary + "12", borderColor: Colors.light.primary + "30" }]}
+                      onPress={() => {
+                        setEditProduct({
+                          id: item.id,
+                          data: {
+                            title: item.title, description: item.description,
+                            price: String(item.price), category: item.category,
+                            portion: item.portion, dailyStock: String(item.dailyStock),
+                            prepTime: String(item.prepTime), imageUrl: item.imageUrl ?? "",
+                          },
+                        });
+                        setShowModal(true);
+                      }}
+                    >
+                      <Feather name="edit-2" size={13} color={Colors.light.primary} />
+                      <Text style={[styles.actionChipText, { color: Colors.light.primary }]}>Düzenle</Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[styles.actionChipIcon, { backgroundColor: Colors.light.accent + "12" }]}
+                      onPress={() => handleDelete(item.id, item.title)}
+                    >
+                      <Feather name="trash-2" size={14} color={Colors.light.accent} />
+                    </Pressable>
                   </View>
                 </View>
-                <View style={styles.productActions}>
-                  <Pressable
-                    style={[styles.actionIconBtn, { backgroundColor: "#E53935" + "15" }]}
-                    onPress={() => openDiscountModal(item)}
-                  >
-                    <Feather name="tag" size={15} color="#E53935" />
-                  </Pressable>
-                  <Pressable
-                    style={styles.editBtn}
-                    onPress={() => {
-                      setEditProduct({
-                        id: item.id,
-                        data: {
-                          title: item.title, description: item.description,
-                          price: String(item.price), category: item.category,
-                          portion: item.portion, dailyStock: String(item.dailyStock),
-                          prepTime: String(item.prepTime), imageUrl: item.imageUrl ?? "",
-                        },
-                      });
-                      setShowModal(true);
-                    }}
-                  >
-                    <Feather name="edit-2" size={15} color={Colors.light.primary} />
-                  </Pressable>
-                  <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.title)}>
-                    <Feather name="trash-2" size={15} color={Colors.light.accent} />
-                  </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconWrap}>
+                  <Feather name="package" size={36} color={Colors.light.primary} />
                 </View>
+                <Text style={styles.emptyTitle}>Henüz ürün yok</Text>
+                <Text style={styles.emptyDesc}>İlk ürününüzü ekleyerek mağazanızı açın</Text>
+                <Pressable style={styles.emptyBtn} onPress={() => setShowModal(true)}>
+                  <Feather name="plus" size={16} color="#fff" />
+                  <Text style={styles.emptyBtnText}>İlk Ürünü Ekle</Text>
+                </Pressable>
               </View>
-            );
-          }}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>📦</Text>
-              <Text style={styles.emptyTitle}>Henüz ürün yok</Text>
-              <Pressable style={styles.addFirstBtn} onPress={() => setShowModal(true)}>
-                <Text style={styles.addFirstBtnText}>İlk Ürününüzü Ekleyin</Text>
-              </Pressable>
-            </View>
-          }
-        />
+            }
+          />
+        )
       )}
 
-      {/* Edit/Create Modal */}
+      {/* ─── TAB: KAMPANYA ─── */}
+      {activeTab === "campaigns" && (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: bottomInset + 40 }}>
+          <Text style={styles.sectionHeading}>Ürün İndirimleri</Text>
+          <Text style={styles.sectionSubheading}>Her ürüne ayrı ayrı indirim uygulayabilirsiniz</Text>
+
+          {productsLoading ? (
+            <ActivityIndicator color={Colors.light.primary} style={{ marginTop: 20 }} />
+          ) : (products ?? []).length === 0 ? (
+            <View style={[styles.emptyState, { paddingTop: 40 }]}>
+              <Feather name="tag" size={36} color={Colors.light.textMuted} />
+              <Text style={styles.emptyTitle}>Önce ürün ekleyin</Text>
+              <Pressable style={styles.emptyBtn} onPress={() => setActiveTab("products")}>
+                <Text style={styles.emptyBtnText}>Ürünlerime Git</Text>
+              </Pressable>
+            </View>
+          ) : (
+            (products ?? []).map(item => {
+              const hasDiscount = item.discountPercent != null && item.discountPercent > 0;
+              const dp = hasDiscount ? item.price * (1 - item.discountPercent! / 100) : null;
+              return (
+                <View key={item.id} style={styles.campaignProductRow}>
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.campaignThumb} />
+                  ) : (
+                    <View style={[styles.campaignThumb, styles.productThumbEmpty]}>
+                      <Feather name="image" size={16} color={Colors.light.textMuted} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.campaignProductName} numberOfLines={1}>{item.title}</Text>
+                    <View style={styles.campaignPriceRow}>
+                      {hasDiscount ? (
+                        <>
+                          <Text style={styles.priceOriginal}>₺{item.price}</Text>
+                          <Text style={styles.priceDiscounted}>₺{dp?.toFixed(0)}</Text>
+                          <View style={styles.discountBadge}>
+                            <Text style={styles.discountBadgeText}>%{item.discountPercent}</Text>
+                          </View>
+                        </>
+                      ) : (
+                        <Text style={styles.price}>₺{item.price}</Text>
+                      )}
+                    </View>
+                  </View>
+                  <Pressable
+                    style={[
+                      styles.campaignActionBtn,
+                      hasDiscount
+                        ? { backgroundColor: "#E5393515", borderColor: "#E5393540" }
+                        : { backgroundColor: Colors.light.primary + "15", borderColor: Colors.light.primary + "40" }
+                    ]}
+                    onPress={() => { openDiscountModal(item); }}
+                  >
+                    <Feather name="tag" size={13} color={hasDiscount ? "#E53935" : Colors.light.primary} />
+                    <Text style={[styles.campaignActionText, { color: hasDiscount ? "#E53935" : Colors.light.primary }]}>
+                      {hasDiscount ? `%${item.discountPercent}` : "İndirim"}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })
+          )}
+
+          {/* Summary */}
+          {discountedProducts > 0 && (
+            <View style={styles.campaignSummaryCard}>
+              <View style={styles.campaignSummaryRow}>
+                <Feather name="info" size={15} color={Colors.light.primary} />
+                <Text style={styles.campaignSummaryText}>
+                  {discountedProducts} ürününüzde aktif indirim var. Müşteriler bu fiyatları görüyor.
+                </Text>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* ─── TAB: REKLAM ─── */}
+      {activeTab === "ads" && (
+        <View style={{ flex: 1 }}>
+          {/* Ad Sub-tabs */}
+          <View style={styles.adTabBar}>
+            <Pressable style={[styles.adTab, adSubTab === "new" && styles.adTabActive]} onPress={() => setAdSubTab("new")}>
+              <Feather name="zap" size={14} color={adSubTab === "new" ? Colors.light.primary : Colors.light.textMuted} />
+              <Text style={[styles.adTabText, adSubTab === "new" && styles.adTabTextActive]}>Yeni Reklam</Text>
+            </Pressable>
+            <Pressable style={[styles.adTab, adSubTab === "my" && styles.adTabActive]} onPress={() => setAdSubTab("my")}>
+              <Feather name="list" size={14} color={adSubTab === "my" ? Colors.light.primary : Colors.light.textMuted} />
+              <Text style={[styles.adTabText, adSubTab === "my" && styles.adTabTextActive]}>
+                Reklamlarım {adCampaigns.length > 0 ? `(${adCampaigns.length})` : ""}
+              </Text>
+            </Pressable>
+          </View>
+
+          {adLoading ? (
+            <View style={styles.loadingCenter}><ActivityIndicator size="large" color={Colors.light.primary} /></View>
+          ) : adSubTab === "new" ? (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: bottomInset + 40 }}>
+              {/* Active campaign notice */}
+              {hasActiveCampaign && activeCampaign && (
+                <View style={styles.activeAdBanner}>
+                  <View style={styles.activeAdBannerLeft}>
+                    <View style={styles.activeAdDot} />
+                    <Text style={styles.activeAdTitle}>Aktif Reklamınız Var</Text>
+                  </View>
+                  <Text style={styles.activeAdExp}>
+                    {activeCampaign.endDate ? `${new Date(activeCampaign.endDate).toLocaleDateString("tr-TR")}'e kadar` : "Süresiz"}
+                  </Text>
+                </View>
+              )}
+
+              {/* Info card */}
+              <View style={styles.adInfoCard}>
+                <View style={styles.adInfoIconWrap}>
+                  <Feather name="trending-up" size={20} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.adInfoTitle}>Tüm Mağazanızı Öne Çıkarın</Text>
+                  <Text style={styles.adInfoDesc}>Kampanya başlattığınızda tüm ürünleriniz listenin üstünde görünür</Text>
+                </View>
+              </View>
+
+              {/* Packages */}
+              <Text style={styles.sectionHeading}>Reklam Paketi Seçin</Text>
+              {adPackages.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Feather name="zap-off" size={36} color={Colors.light.textMuted} />
+                  <Text style={styles.emptyTitle}>Paket bulunamadı</Text>
+                </View>
+              ) : (
+                adPackages.map(pkg => (
+                  <Pressable
+                    key={pkg.id}
+                    style={[styles.adPackageCard, selectedPackage === pkg.id && { borderColor: pkg.color, borderWidth: 2 }]}
+                    onPress={() => setSelectedPackage(pkg.id)}
+                  >
+                    {pkg.popular && (
+                      <View style={[styles.popularBadge, { backgroundColor: pkg.color }]}>
+                        <Text style={styles.popularBadgeText}>En Popüler</Text>
+                      </View>
+                    )}
+                    <View style={styles.adPackageHeader}>
+                      <View style={[styles.adPackageIcon, { backgroundColor: pkg.color + "18" }]}>
+                        <Feather name="zap" size={20} color={pkg.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.adPackageName}>{pkg.name}</Text>
+                        <Text style={styles.adPackageDur}>{pkg.durationDays} gün · Tüm ürünler</Text>
+                      </View>
+                      <Text style={[styles.adPackagePrice, { color: pkg.color }]}>₺{pkg.price}</Text>
+                      <View style={[styles.radioOuter, selectedPackage === pkg.id && { borderColor: pkg.color }]}>
+                        {selectedPackage === pkg.id && <View style={[styles.radioInner, { backgroundColor: pkg.color }]} />}
+                      </View>
+                    </View>
+                    <View style={styles.adFeatureList}>
+                      {pkg.features.map((f, i) => (
+                        <View key={i} style={styles.adFeatureRow}>
+                          <Feather name="check" size={13} color={pkg.color} />
+                          <Text style={styles.adFeatureText}>{f}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </Pressable>
+                ))
+              )}
+
+              {/* Terms */}
+              <View style={styles.termsCard}>
+                <Feather name="file-text" size={15} color={Colors.light.textSecondary} />
+                <Text style={styles.termsText}>
+                  Kampanya bedelinin 3 iş günü içinde belirtilen hesaba ödenmesi gerekmektedir.
+                  Ödeme yapılmayan kampanyalar otomatik olarak iptal edilir.
+                </Text>
+              </View>
+              <Pressable style={styles.agreeRow} onPress={() => setAgreedToTerms(!agreedToTerms)}>
+                <Switch
+                  value={agreedToTerms}
+                  onValueChange={setAgreedToTerms}
+                  trackColor={{ false: Colors.light.border, true: Colors.light.primary + "80" }}
+                  thumbColor={agreedToTerms ? Colors.light.primary : "#f4f3f4"}
+                />
+                <Text style={styles.agreeText}>Kampanya koşullarını okudum ve kabul ediyorum</Text>
+              </Pressable>
+
+              {/* Submit */}
+              <Pressable
+                style={[styles.adSubmitBtn, (submittingAd || !agreedToTerms || !selectedPackage || hasActiveCampaign) && { opacity: 0.6 }]}
+                onPress={handleAdSubmit}
+                disabled={submittingAd || !agreedToTerms || !selectedPackage || hasActiveCampaign}
+              >
+                {submittingAd ? <ActivityIndicator color="#fff" /> : (
+                  <>
+                    <Feather name="zap" size={18} color="#fff" />
+                    <Text style={styles.adSubmitBtnText}>
+                      {hasActiveCampaign ? "Aktif Kampanya Mevcut" : "Reklamı Başlat"}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </ScrollView>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: bottomInset + 40 }}>
+              {adCampaigns.length === 0 ? (
+                <View style={[styles.emptyState, { paddingTop: 40 }]}>
+                  <Feather name="zap-off" size={40} color={Colors.light.textMuted} />
+                  <Text style={styles.emptyTitle}>Henüz reklamınız yok</Text>
+                  <Text style={styles.emptyDesc}>İlk reklam kampanyanızı başlatın</Text>
+                  <Pressable style={styles.emptyBtn} onPress={() => setAdSubTab("new")}>
+                    <Feather name="plus" size={16} color="#fff" />
+                    <Text style={styles.emptyBtnText}>Reklam Oluştur</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                adCampaigns.map(camp => {
+                  const { label, color } = adStatusLabel(camp.status);
+                  const pkg = adPackages.find(p => p.id === camp.packageType);
+                  return (
+                    <View key={camp.id} style={styles.adCampaignCard}>
+                      <View style={styles.adCampaignHeader}>
+                        <View style={[styles.adCampaignIcon, { backgroundColor: (pkg?.color ?? Colors.light.primary) + "18" }]}>
+                          <Feather name="zap" size={18} color={pkg?.color ?? Colors.light.primary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.adCampaignName}>{pkg?.name ?? camp.packageType} Paketi</Text>
+                          <Text style={styles.adCampaignSub}>Tüm ürünler · {camp.durationDays} gün</Text>
+                        </View>
+                        <View style={[styles.statusBadge, { backgroundColor: color + "18" }]}>
+                          <View style={[styles.statusDot, { backgroundColor: color }]} />
+                          <Text style={[styles.statusText, { color }]}>{label}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.adCampaignDivider} />
+                      <View style={styles.adCampaignMeta}>
+                        <View style={styles.adCampaignMetaItem}>
+                          <Feather name="calendar" size={12} color={Colors.light.textMuted} />
+                          <Text style={styles.adMetaText}>
+                            {camp.startDate ? new Date(camp.startDate).toLocaleDateString("tr-TR") : "-"}
+                          </Text>
+                        </View>
+                        <Feather name="arrow-right" size={12} color={Colors.light.textMuted} />
+                        <View style={styles.adCampaignMetaItem}>
+                          <Feather name="calendar" size={12} color={Colors.light.textMuted} />
+                          <Text style={styles.adMetaText}>
+                            {camp.endDate ? new Date(camp.endDate).toLocaleDateString("tr-TR") : "-"}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }} />
+                        <Text style={styles.adCampaignPrice}>₺{camp.price}</Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          )}
+        </View>
+      )}
+
+      {/* ── MODAL: Ürün Ekle/Düzenle ── */}
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modal, { paddingTop: topInset + 20 }]}>
-          <Text style={styles.modalTitle}>{editProduct ? "Ürünü Düzenle" : "Yeni Ürün Ekle"}</Text>
+        <View style={[styles.modal, { paddingTop: topInset + 16 }]}>
+          <View style={styles.modalHeader}>
+            <Pressable onPress={() => { setShowModal(false); setEditProduct(null); }} hitSlop={8}>
+              <Feather name="x" size={22} color={Colors.light.text} />
+            </Pressable>
+            <Text style={styles.modalTitle}>{editProduct ? "Ürünü Düzenle" : "Yeni Ürün Ekle"}</Text>
+            <View style={{ width: 22 }} />
+          </View>
           <ProductForm
             initial={editProduct?.data}
             onSave={handleSave}
@@ -400,26 +843,24 @@ export default function MyProductsScreen() {
         </View>
       </Modal>
 
-      {/* Discount Modal */}
+      {/* ── MODAL: İndirim ── */}
       <Modal visible={showDiscountModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modal, { paddingTop: topInset + 20 }]}>
-          <View style={styles.discountModalHeader}>
+        <View style={[styles.modal, { paddingTop: topInset + 16 }]}>
+          <View style={styles.modalHeader}>
             <Pressable onPress={() => setShowDiscountModal(false)} hitSlop={8}>
               <Feather name="x" size={22} color={Colors.light.text} />
             </Pressable>
             <Text style={styles.modalTitle}>İndirim Ayarla</Text>
-            <View style={{ width: 24 }} />
+            <View style={{ width: 22 }} />
           </View>
 
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, gap: 16, paddingBottom: 40 }}>
-            {/* Product name */}
             <View style={styles.discountProductCard}>
               <Feather name="package" size={18} color={Colors.light.primary} />
               <Text style={styles.discountProductName} numberOfLines={1}>{discountProduct?.title}</Text>
               <Text style={styles.discountProductBasePrice}>₺{discountProduct?.price}</Text>
             </View>
 
-            {/* Preview */}
             {parseInt(discountInput || "0") > 0 && (
               <View style={styles.discountPreviewCard}>
                 <View style={styles.discountPreviewBadge}>
@@ -433,8 +874,7 @@ export default function MyProductsScreen() {
               </View>
             )}
 
-            {/* Presets */}
-            <Text style={styles.fieldLabel}>Hızlı Seçim</Text>
+            <Text style={[formStyles.fieldLabel, { marginBottom: 0 }]}>Hızlı Seçim</Text>
             <View style={styles.presetGrid}>
               {DISCOUNT_PRESETS.map(pct => (
                 <Pressable
@@ -443,14 +883,13 @@ export default function MyProductsScreen() {
                   onPress={() => setDiscountInput(String(pct))}
                 >
                   <Text style={[styles.presetBtnText, discountInput === String(pct) && styles.presetBtnTextActive]}>
-                    {pct === 0 ? "İndirim Yok" : `%${pct}`}
+                    {pct === 0 ? "Yok" : `%${pct}`}
                   </Text>
                 </Pressable>
               ))}
             </View>
 
-            {/* Manual input */}
-            <Text style={styles.fieldLabel}>Manuel Giriş (%0 - %80)</Text>
+            <Text style={[formStyles.fieldLabel, { marginBottom: 0 }]}>Manuel Giriş (%0 - %80)</Text>
             <View style={styles.discountInputRow}>
               <Feather name="tag" size={18} color={Colors.light.textMuted} />
               <TextInput
@@ -469,9 +908,7 @@ export default function MyProductsScreen() {
               onPress={handleSaveDiscount}
               disabled={savingDiscount}
             >
-              {savingDiscount ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
+              {savingDiscount ? <ActivityIndicator color="#fff" /> : (
                 <>
                   <Feather name="check" size={18} color="#fff" />
                   <Text style={styles.discountSaveBtnText}>
@@ -487,117 +924,242 @@ export default function MyProductsScreen() {
   );
 }
 
+const pStyles = StyleSheet.create({
+  imagePicker: {
+    height: 120, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.light.border,
+    borderStyle: "dashed", alignItems: "center", justifyContent: "center",
+    backgroundColor: Colors.light.backgroundSecondary, marginBottom: 8, overflow: "hidden",
+  },
+  imagePreview: { width: "100%", height: "100%" },
+  imagePlaceholder: { alignItems: "center", gap: 8 },
+  imagePlaceholderText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textMuted },
+  removeImage: { alignSelf: "flex-end", marginBottom: 12 },
+  removeImageText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.light.accent },
+  categoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+  catChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: Colors.light.backgroundSecondary, borderWidth: 1, borderColor: Colors.light.border,
+  },
+  catChipActive: { backgroundColor: Colors.light.primary + "18", borderColor: Colors.light.primary },
+  catChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary },
+  catChipTextActive: { color: Colors.light.primary, fontFamily: "Inter_600SemiBold" },
+  formButtons: { flexDirection: "row", gap: 12, marginTop: 8 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 14,
+    backgroundColor: Colors.light.backgroundSecondary, alignItems: "center",
+  },
+  cancelBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.textSecondary },
+  saveBtn: { flex: 2, paddingVertical: 14, borderRadius: 14, backgroundColor: Colors.light.primary, alignItems: "center" },
+  saveBtnText: { color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.background, gap: 12 },
-  errorText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary },
-  backLink: { fontSize: 15, fontFamily: "Inter_500Medium", color: Colors.light.primary },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 16 },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.surface, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.text },
-  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.primary, alignItems: "center", justifyContent: "center" },
-  listContent: { paddingHorizontal: 20, paddingBottom: 100 },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: Colors.light.background, padding: 24 },
+  errorText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary, textAlign: "center" },
+  backBtn: { backgroundColor: Colors.light.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
+  backBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 },
 
-  productItem: {
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12 },
+  headerCenter: { flex: 1, alignItems: "center" },
+  headerTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  liveIndicator: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.light.success },
+  liveText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: Colors.light.success },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.surface, alignItems: "center", justifyContent: "center" },
+  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.primary, alignItems: "center", justifyContent: "center" },
+
+  statsStrip: { flexDirection: "row", gap: 8, paddingHorizontal: 16, marginBottom: 12 },
+
+  tabBar: {
+    flexDirection: "row", marginHorizontal: 16, marginBottom: 12,
+    backgroundColor: Colors.light.surface, borderRadius: 14, padding: 4,
+    ...Platform.select({ web: { boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } }),
+  },
+  tab: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 10, borderRadius: 10 },
+  tabActive: { backgroundColor: Colors.light.primary + "15" },
+  tabText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.light.textMuted },
+  tabTextActive: { fontSize: 12, fontFamily: "Inter_700Bold", color: Colors.light.primary },
+  tabBadge: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.light.success, position: "absolute", top: 6, right: 10 },
+
+  skeleton: { height: 120, backgroundColor: Colors.light.backgroundSecondary, borderRadius: 16, marginBottom: 10 },
+  loadingCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
+
+  productCard: {
+    backgroundColor: Colors.light.surface, borderRadius: 16, padding: 14, marginBottom: 10,
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 2 },
+      web: { boxShadow: "0 2px 12px rgba(60,30,10,0.07)" },
+    }),
+  },
+  productCardTop: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  productThumb: { width: 60, height: 60, borderRadius: 12 },
+  productThumbEmpty: { backgroundColor: Colors.light.backgroundSecondary, alignItems: "center", justifyContent: "center" },
+  productMeta: { flex: 1, justifyContent: "space-between" },
+  productTitleRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  productTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.text, flex: 1 },
+  productCategory: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
+  discountBadge: { backgroundColor: "#E5393515", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: "#E5393530" },
+  discountBadgeText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#E53935" },
+  priceRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
+  price: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  priceOriginal: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, textDecorationLine: "line-through" },
+  priceDiscounted: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#E53935" },
+
+  stockSection: { marginBottom: 12 },
+  stockLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 5 },
+  stockLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+  stockCount: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  stockBar: { height: 4, backgroundColor: Colors.light.borderLight, borderRadius: 2, overflow: "hidden" },
+  stockBarFill: { height: "100%", borderRadius: 2 },
+
+  productCardActions: { flexDirection: "row", gap: 8, alignItems: "center" },
+  actionChip: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
+    paddingVertical: 8, borderRadius: 10, borderWidth: 1,
+  },
+  actionChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  actionChipIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+
+  emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
+  emptyIconWrap: { width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.light.primary + "15", alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
+  emptyDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, textAlign: "center" },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.light.primary, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 12, marginTop: 4 },
+  emptyBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+
+  sectionHeading: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 4 },
+  sectionSubheading: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginBottom: 14 },
+
+  campaignProductRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: Colors.light.surface, borderRadius: 14, padding: 12, marginBottom: 8,
   },
-  productThumb: { width: 52, height: 52, borderRadius: 10 },
-  productThumbEmpty: { backgroundColor: Colors.light.backgroundSecondary, alignItems: "center", justifyContent: "center" },
-  productInfo: { flex: 1, minWidth: 0 },
-  productTitleRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 3 },
-  productTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text, flex: 1 },
-  discountChip: { backgroundColor: "#E5393515", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
-  discountChipText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#E53935" },
-  productPriceRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  productOriginalPrice: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, textDecorationLine: "line-through" },
-  productDiscountedPrice: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#E53935" },
-  productMeta: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary },
-  productStock: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+  campaignThumb: { width: 44, height: 44, borderRadius: 10 },
+  campaignProductName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 2 },
+  campaignPriceRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  campaignActionBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
+  },
+  campaignActionText: { fontSize: 12, fontFamily: "Inter_700Bold" },
+  campaignSummaryCard: {
+    backgroundColor: Colors.light.primary + "10", borderRadius: 14, padding: 14, marginTop: 8,
+    borderWidth: 1, borderColor: Colors.light.primary + "25",
+  },
+  campaignSummaryRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  campaignSummaryText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.text, lineHeight: 19 },
 
-  productActions: { flexDirection: "row", gap: 6 },
-  actionIconBtn: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  editBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.light.primary + "15", alignItems: "center", justifyContent: "center" },
-  deleteBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.light.accent + "15", alignItems: "center", justifyContent: "center" },
-  skeleton: { height: 70, backgroundColor: Colors.light.backgroundSecondary, borderRadius: 14, marginBottom: 8 },
-  empty: { alignItems: "center", paddingTop: 60, gap: 10 },
-  emptyEmoji: { fontSize: 48 },
-  emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
-  addFirstBtn: { backgroundColor: Colors.light.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  addFirstBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  adTabBar: {
+    flexDirection: "row", marginHorizontal: 16, marginBottom: 12,
+    backgroundColor: Colors.light.backgroundSecondary, borderRadius: 12, padding: 3,
+  },
+  adTab: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 9, borderRadius: 10 },
+  adTabActive: { backgroundColor: Colors.light.surface },
+  adTabText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.light.textMuted },
+  adTabTextActive: { color: Colors.light.primary, fontFamily: "Inter_700Bold" },
 
-  modal: { flex: 1, backgroundColor: Colors.light.background, paddingHorizontal: 20 },
-  modalTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 20, textAlign: "center" },
-  discountModalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  activeAdBanner: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    backgroundColor: Colors.light.success + "15", borderRadius: 14, padding: 14, marginBottom: 12,
+    borderWidth: 1, borderColor: Colors.light.success + "30",
+  },
+  activeAdBannerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  activeAdDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.light.success },
+  activeAdTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.light.success },
+  activeAdExp: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+
+  adInfoCard: {
+    flexDirection: "row", alignItems: "center", gap: 14,
+    backgroundColor: Colors.light.primary, borderRadius: 16, padding: 16, marginBottom: 16,
+  },
+  adInfoIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  adInfoTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 3 },
+  adInfoDesc: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.85)", lineHeight: 17 },
+
+  adPackageCard: {
+    backgroundColor: Colors.light.surface, borderRadius: 16, padding: 16, marginBottom: 10,
+    borderWidth: 1, borderColor: Colors.light.border, overflow: "hidden",
+  },
+  popularBadge: { position: "absolute", top: 0, right: 0, paddingHorizontal: 12, paddingVertical: 5, borderBottomLeftRadius: 12 },
+  popularBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  adPackageHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
+  adPackageIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  adPackageName: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  adPackageDur: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
+  adPackagePrice: { fontSize: 20, fontFamily: "Inter_700Bold", marginRight: 8 },
+  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: Colors.light.border, alignItems: "center", justifyContent: "center" },
+  radioInner: { width: 12, height: 12, borderRadius: 6 },
+  adFeatureList: { gap: 6 },
+  adFeatureRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  adFeatureText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary },
+
+  termsCard: {
+    flexDirection: "row", gap: 10, alignItems: "flex-start",
+    backgroundColor: Colors.light.backgroundSecondary, borderRadius: 12, padding: 14, marginTop: 8,
+  },
+  termsText: { flex: 1, fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, lineHeight: 18 },
+  agreeRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
+  agreeText: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.text },
+  adSubmitBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    backgroundColor: Colors.light.primary, borderRadius: 16, paddingVertical: 16, marginTop: 8,
+  },
+  adSubmitBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
+
+  adCampaignCard: { backgroundColor: Colors.light.surface, borderRadius: 16, padding: 14, marginBottom: 10 },
+  adCampaignHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  adCampaignIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  adCampaignName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
+  adCampaignSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
+  statusBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  adCampaignDivider: { height: 1, backgroundColor: Colors.light.borderLight, marginVertical: 10 },
+  adCampaignMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
+  adCampaignMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  adMetaText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+  adCampaignPrice: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.light.primary },
+
+  modal: { flex: 1, backgroundColor: Colors.light.background },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 16 },
+  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
 
   discountProductCard: {
     flexDirection: "row", alignItems: "center", gap: 10,
-    backgroundColor: Colors.light.backgroundSecondary, borderRadius: 12, padding: 14,
+    backgroundColor: Colors.light.backgroundSecondary, borderRadius: 14, padding: 14,
   },
   discountProductName: { flex: 1, fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
-  discountProductBasePrice: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.light.textSecondary },
-
+  discountProductBasePrice: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.light.primary },
   discountPreviewCard: {
-    backgroundColor: "#E5393508", borderRadius: 14, padding: 16,
-    borderWidth: 1.5, borderColor: "#E5393530",
-    alignItems: "center", gap: 6,
+    backgroundColor: "#E5393510", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#E5393525",
+    alignItems: "center", gap: 4,
   },
-  discountPreviewBadge: { backgroundColor: "#E53935", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5 },
-  discountPreviewBadgeText: { color: "#fff", fontSize: 13, fontFamily: "Inter_700Bold" },
-  discountPreviewPrices: { flexDirection: "row", alignItems: "center", gap: 12 },
+  discountPreviewBadge: { backgroundColor: "#E53935", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 4 },
+  discountPreviewBadgeText: { color: "#fff", fontSize: 12, fontFamily: "Inter_700Bold" },
+  discountPreviewPrices: { flexDirection: "row", alignItems: "center", gap: 10 },
   discountPreviewOriginal: { fontSize: 16, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, textDecorationLine: "line-through" },
-  discountPreviewNew: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#E53935" },
-  discountPreviewHint: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
-
+  discountPreviewNew: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#E53935" },
+  discountPreviewHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
   presetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   presetBtn: {
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10,
-    backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border,
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10,
+    backgroundColor: Colors.light.backgroundSecondary, borderWidth: 1, borderColor: Colors.light.border,
   },
-  presetBtnActive: { backgroundColor: "#E5393515", borderColor: "#E53935" },
+  presetBtnActive: { backgroundColor: Colors.light.primary + "18", borderColor: Colors.light.primary },
   presetBtnText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary },
-  presetBtnTextActive: { color: "#E53935", fontFamily: "Inter_700Bold" },
-
+  presetBtnTextActive: { color: Colors.light.primary, fontFamily: "Inter_700Bold" },
   discountInputRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.light.surface, borderRadius: 14, paddingHorizontal: 16, height: 54,
-    borderWidth: 1, borderColor: Colors.light.border,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    borderWidth: 1, borderColor: Colors.light.border, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12, backgroundColor: Colors.light.surface,
   },
-  discountInput: { flex: 1, fontFamily: "Inter_700Bold", fontSize: 24, color: Colors.light.text },
-  discountInputSuffix: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.textMuted },
-
+  discountInput: { flex: 1, fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  discountInputSuffix: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.textMuted },
   discountSaveBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#E53935", borderRadius: 16, paddingVertical: 17,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    backgroundColor: Colors.light.primary, borderRadius: 14, paddingVertical: 15,
   },
-  discountSaveBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 17 },
-
-  formScroll: { flex: 1 },
-  imagePicker: {
-    height: 160, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.light.border,
-    borderStyle: "dashed", overflow: "hidden", marginBottom: 8,
-  },
-  imagePreview: { width: "100%", height: "100%" },
-  imagePlaceholder: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.light.backgroundSecondary },
-  imagePlaceholderText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.textMuted },
-  removeImage: { alignItems: "center", marginBottom: 16 },
-  removeImageText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.accent },
-  fieldGroup: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary, marginBottom: 8 },
-  fieldInput: {
-    backgroundColor: Colors.light.surface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-    fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text,
-    borderWidth: 1, borderColor: Colors.light.border,
-  },
-  fieldInputMultiline: { height: 80, textAlignVertical: "top" },
-  categoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  catChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border },
-  catChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
-  catChipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary },
-  catChipTextActive: { color: "#fff" },
-  formButtons: { flexDirection: "row", gap: 12, marginTop: 8, marginBottom: 40 },
-  cancelBtn: { flex: 1, paddingVertical: 16, borderRadius: 14, backgroundColor: Colors.light.backgroundSecondary, alignItems: "center" },
-  cancelBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: Colors.light.textSecondary },
-  saveBtn: { flex: 2, paddingVertical: 16, borderRadius: 14, backgroundColor: Colors.light.primary, alignItems: "center" },
-  saveBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff" },
+  discountSaveBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
 });
