@@ -12,7 +12,7 @@ import { getBaseUrl } from "@workspace/api-client-react";
 
 const API_BASE = getBaseUrl();
 
-const CATEGORIES = [
+const BUYER_CATEGORIES = [
   { key: "order", label: "Sipariş Sorunu", icon: "shopping-bag" },
   { key: "payment", label: "Ödeme / İade", icon: "credit-card" },
   { key: "seller", label: "Satıcı Şikayeti", icon: "user-x" },
@@ -21,7 +21,16 @@ const CATEGORIES = [
   { key: "other", label: "Diğer", icon: "help-circle" },
 ];
 
-const FAQ = [
+const SELLER_CATEGORIES = [
+  { key: "earnings", label: "Kazanç / Ödeme", icon: "dollar-sign" },
+  { key: "product", label: "Ürün / Stok", icon: "package" },
+  { key: "order", label: "Sipariş Yönetimi", icon: "clipboard" },
+  { key: "account", label: "Mağaza / Hesap", icon: "settings" },
+  { key: "hygiene", label: "Hijyen Belgesi", icon: "shield" },
+  { key: "other", label: "Diğer", icon: "help-circle" },
+];
+
+const BUYER_FAQ = [
   {
     q: "Siparişimi nasıl iptal edebilirim?",
     a: "Sipariş 'Hazırlanıyor' aşamasına geçmeden iptal edebilirsiniz. Siparişler ekranından ilgili siparişe girin ve 'İptal Et' seçeneğini kullanın.",
@@ -45,6 +54,37 @@ const FAQ = [
   {
     q: "Ürün görseli gerçekle uyuşmuyorsa ne yapabilirim?",
     a: "Sipariş tesliminden sonra 'Satıcı Şikayeti' kategorisinde destek talebi oluşturun. Ekibimiz 24 saat içinde size dönecektir.",
+  },
+];
+
+const SELLER_FAQ = [
+  {
+    q: "Kazancım ne zaman cüzdanıma aktarılır?",
+    a: "Sipariş teslim onayından sonra kazancınız 24-48 saat içinde cüzdanınıza aktarılır. Hafta sonu ve resmi tatillerde bu süre uzayabilir.",
+  },
+  {
+    q: "Ürün eklerken stok sayısını nasıl yönetirim?",
+    a: "Yönetici Paneli → Ürünlerim sekmesinden her ürün için stok miktarını düzenleyebilirsiniz. Stok 0'a düştüğünde ürün otomatik olarak devre dışı kalır.",
+  },
+  {
+    q: "Gelen siparişi nasıl onaylarım?",
+    a: "Bildirimler bölümünden veya sipariş detayına girerek siparişi 'Hazırlanıyor' → 'Yolda' → 'Teslim Edildi' şeklinde güncelleyebilirsiniz.",
+  },
+  {
+    q: "Hijyen belgesi nasıl yüklenir?",
+    a: "Yönetici Paneli → Hijyen sekmesinden hijyen beyannamesi doldurabilir ve belge bilgilerinizi girebilirsiniz. Platform ekibimiz belgeyi inceleyerek puanınızı günceller.",
+  },
+  {
+    q: "Reklam paketi nasıl satın alırım?",
+    a: "Yönetici Paneli → Reklam sekmesinden uygun paketi seçip cüzdanınızdaki bakiyeyle ödeme yapabilirsiniz. Kampanya hemen başlatılır.",
+  },
+  {
+    q: "İndirim nasıl tanımlarım?",
+    a: "Yönetici Paneli → Kampanya sekmesinden her ürün için ayrı indirim oranı belirleyebilirsiniz. İndirimli ürünler ana sayfada öne çıkar.",
+  },
+  {
+    q: "Satıcı hesabım neden askıya alındı?",
+    a: "Düşük hijyen puanı, çok sayıda olumsuz şikayet veya platform kurallarının ihlali hesabın askıya alınmasına yol açabilir. Ayrıntılar için satıcı destek hattımıza ulaşın.",
   },
 ];
 
@@ -88,6 +128,9 @@ export default function SupportScreen() {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+  const isSeller = user?.isSeller ?? false;
+  const CATEGORIES = isSeller ? SELLER_CATEGORIES : BUYER_CATEGORIES;
+  const FAQ = isSeller ? SELLER_FAQ : BUYER_FAQ;
 
   const [tab, setTab] = useState<"faq" | "new" | "tickets">("faq");
   const [category, setCategory] = useState("");
@@ -162,10 +205,12 @@ export default function SupportScreen() {
           <View style={styles.infoCard}>
             <Ionicons name="information-circle" size={22} color={Colors.light.primary} />
             <Text style={styles.infoText}>
-              Aşağıdaki sık sorulan sorulara göz atın. Cevabınızı bulamazsanız destek talebi oluşturun.
+              {isSeller
+                ? "Satıcı olarak sık karşılaşılan sorulara göz atın. Cevabınızı bulamazsanız satıcı destek talebi oluşturun."
+                : "Aşağıdaki sık sorulan sorulara göz atın. Cevabınızı bulamazsanız destek talebi oluşturun."}
             </Text>
           </View>
-          <Text style={styles.sectionTitle}>Sık Sorulan Sorular</Text>
+          <Text style={styles.sectionTitle}>{isSeller ? "Satıcı Destek — S.S.S." : "Sık Sorulan Sorular"}</Text>
           <View style={styles.faqCard}>
             {FAQ.map((item, i) => (
               <React.Fragment key={i}>
@@ -175,10 +220,15 @@ export default function SupportScreen() {
             ))}
           </View>
           <View style={styles.contactCard}>
-            <Feather name="mail" size={20} color={Colors.light.primary} />
+            <Feather name={isSeller ? "briefcase" : "mail"} size={20} color={Colors.light.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.contactTitle}>Bize Ulaşın</Text>
-              <Text style={styles.contactText}>destek@hanameli.com</Text>
+              <Text style={styles.contactTitle}>{isSeller ? "Satıcı Destek Hattı" : "Bize Ulaşın"}</Text>
+              <Text style={styles.contactText}>{isSeller ? "satici-destek@hanameli.com" : "destek@hanameli.com"}</Text>
+              {isSeller && (
+                <Text style={[styles.contactText, { fontSize: 11, color: Colors.light.textMuted, marginTop: 2 }]}>
+                  Hafta içi 09:00 – 18:00
+                </Text>
+              )}
             </View>
           </View>
         </ScrollView>
