@@ -116,9 +116,20 @@ export default function MessagesScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.primary} colors={[Colors.light.primary]} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIconText}>💬</Text>
+              <View style={styles.emptyIconWrap}>
+                <View style={styles.emptyIconCircle}>
+                  <Feather name="message-circle" size={36} color={Colors.light.primary} />
+                </View>
+                <View style={styles.emptyIconBadge}>
+                  <Feather name="plus" size={12} color="#fff" />
+                </View>
+              </View>
               <Text style={styles.emptyTitle}>Henüz mesaj yok</Text>
-              <Text style={styles.emptyText}>Satıcılarla iletişime geçin</Text>
+              <Text style={styles.emptyText}>Satıcılarla iletişime geçin,{"\n"}siparişlerinizi takip edin</Text>
+              <Pressable style={styles.emptyBtn} onPress={() => router.push("/(tabs)/explore")}>
+                <Feather name="search" size={15} color="#fff" />
+                <Text style={styles.emptyBtnText}>Satıcıları Keşfet</Text>
+              </Pressable>
             </View>
           }
           contentContainerStyle={{ paddingBottom: 100 }}
@@ -166,10 +177,40 @@ const styles = StyleSheet.create({
   },
   unreadBadgeText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 11 },
   skeletonRow: { height: 80, backgroundColor: Colors.light.backgroundSecondary, marginBottom: 1 },
-  emptyContainer: { alignItems: "center", paddingTop: 80, gap: 8 },
-  emptyIconText: { fontSize: 64 },
-  emptyTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, textAlign: "center" },
+  emptyContainer: { alignItems: "center", paddingTop: 80, gap: 12 },
+  emptyIconWrap: { position: "relative", marginBottom: 8 },
+  emptyIconCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: "#FFF7ED",
+    borderWidth: 2, borderColor: "#FED7AA",
+    alignItems: "center", justifyContent: "center",
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 12 },
+      android: { elevation: 4 },
+      web: { boxShadow: "0 4px 16px rgba(232,101,26,0.18)" },
+    }),
+  },
+  emptyIconBadge: {
+    position: "absolute", bottom: 2, right: 2,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.light.primary,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: Colors.light.background,
+  },
+  emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#C4521A" },
+  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: "#D97706", textAlign: "center", lineHeight: 22 },
+  emptyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 24, paddingVertical: 12,
+    borderRadius: 14, marginTop: 8,
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      android: { elevation: 4 },
+      web: { boxShadow: "0 4px 12px rgba(232,101,26,0.3)" },
+    }),
+  },
+  emptyBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 },
   loginBtn: { backgroundColor: Colors.light.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14, marginTop: 8 },
   loginBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 16 },
 });
