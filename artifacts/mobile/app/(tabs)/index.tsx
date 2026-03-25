@@ -377,30 +377,31 @@ const styles = StyleSheet.create({
   /* Brand */
   headerBrand: {
     flex: 1,
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
-    paddingHorizontal: 4,
+    paddingLeft: 2,
   },
   headerBrandName: {
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: "Inter_700Bold",
     color: "#C4521A",
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
+    lineHeight: 28,
   },
   headerSlogan: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 1,
+    marginTop: 2,
   },
   headerSloganText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
     color: "#4A7C59",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   headerLeaf: {
-    fontSize: 11,
+    fontSize: 12,
   },
 
   /* Search bar (below header) */
