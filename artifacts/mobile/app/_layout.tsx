@@ -33,15 +33,15 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false, gestureEnabled: true, fullScreenGestureEnabled: true }}>
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: false, fullScreenGestureEnabled: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false, presentation: "modal", gestureEnabled: true, fullScreenGestureEnabled: true }} />
-      <Stack.Screen name="product/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
-      <Stack.Screen name="order/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
-      <Stack.Screen name="seller/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
-      <Stack.Screen name="checkout" options={{ headerShown: false, presentation: "modal", gestureEnabled: true, fullScreenGestureEnabled: true }} />
-      <Stack.Screen name="chat/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
-      <Stack.Screen name="support" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
+      <Stack.Screen name="auth" options={{ headerShown: false, presentation: "modal", gestureEnabled: false }} />
+      <Stack.Screen name="product/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
+      <Stack.Screen name="order/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
+      <Stack.Screen name="seller/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
+      <Stack.Screen name="checkout" options={{ headerShown: false, presentation: "modal", gestureEnabled: false }} />
+      <Stack.Screen name="chat/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
+      <Stack.Screen name="support" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
     </Stack>
   );
 }

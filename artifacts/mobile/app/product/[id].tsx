@@ -113,6 +113,14 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.headerBtns, { top: (Platform.OS === "web" ? 67 : insets.top) + 12 }]}>
+        <Pressable style={styles.iconBtn} onPress={() => router.back()}>
+          <Feather name="arrow-left" size={20} color={Colors.light.text} />
+        </Pressable>
+        <Pressable style={styles.iconBtn} onPress={handleFavorite}>
+          <Ionicons name={isFavorited ? "heart" : "heart-outline"} size={20} color={isFavorited ? Colors.light.accent : Colors.light.text} />
+        </Pressable>
+      </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
           {product.imageUrl ? (
@@ -122,14 +130,6 @@ export default function ProductDetailScreen() {
               <Text style={styles.placeholderEmoji}>🍲</Text>
             </View>
           )}
-          <View style={[styles.headerBtns, { top: (Platform.OS === "web" ? 67 : insets.top) + 12 }]}>
-            <Pressable style={styles.iconBtn} onPress={() => router.back()}>
-              <Feather name="arrow-left" size={20} color={Colors.light.text} />
-            </Pressable>
-            <Pressable style={styles.iconBtn} onPress={handleFavorite}>
-              <Ionicons name={isFavorited ? "heart" : "heart-outline"} size={20} color={isFavorited ? Colors.light.accent : Colors.light.text} />
-            </Pressable>
-          </View>
           {product.isSponsored && (
             <View style={styles.sponsoredBadge}>
               <Text style={styles.sponsoredText}>Öne Çıkan</Text>
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   image: { width: "100%", height: 300 },
   imagePlaceholder: { backgroundColor: Colors.light.backgroundTertiary, alignItems: "center", justifyContent: "center" },
   placeholderEmoji: { fontSize: 80 },
-  headerBtns: { position: "absolute", left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16 },
+  headerBtns: { position: "absolute", left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, zIndex: 10 },
   iconBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center",

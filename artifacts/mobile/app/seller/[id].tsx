@@ -267,15 +267,16 @@ export default function SellerScreen() {
   const avg = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : null;
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      style={[styles.container, { paddingTop: topInset }]}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100 }}
-    >
-      <Pressable style={styles.backBtn} onPress={() => router.back()}>
+    <View style={[styles.container, { paddingTop: topInset }]}>
+      <Pressable style={[styles.backBtn, { position: "absolute", zIndex: 10, top: 12, left: 16 }]} onPress={() => router.back()}>
         <Feather name="arrow-left" size={20} color={Colors.light.text} />
       </Pressable>
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
 
       {/* Profile */}
       <View style={styles.profileSection}>
@@ -486,6 +487,7 @@ export default function SellerScreen() {
         )}
       </View>
     </ScrollView>
+  </View>
   );
 }
 
