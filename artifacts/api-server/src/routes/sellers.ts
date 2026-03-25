@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { db, productsTable, usersTable, hygieneRatingsTable } from "@workspace/db";
-import { eq, and, sql, avg, count } from "drizzle-orm";
+import { eq, and, sql, avg, count, ilike } from "drizzle-orm";
 import { optionalAuth, requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const router = Router();
 
 router.get("/", optionalAuth, async (req: AuthRequest, res) => {
   try {
+    const { search } = req.query as Record<string, string>;
+    const conditions = search
+      ? [eq(usersTable.isSeller, true), ilike(usersTable.name, `%${search}%`)]
+      : [eq(usersTable.isSeller, true)];
+
     const sellers = await db.select({
       id: usersTable.id,
       name: usersTable.name,
@@ -15,7 +20,7 @@ router.get("/", optionalAuth, async (req: AuthRequest, res) => {
       reviewCount: usersTable.reviewCount,
       address: usersTable.address,
       deliveryFee: usersTable.deliveryFee,
-    }).from(usersTable).where(eq(usersTable.isSeller, true));
+    }).from(usersTable).where(and(...conditions));
 
     const withCounts = await Promise.all(sellers.map(async (s) => {
       const [countRow] = await db.select({ count: sql<number>`count(*)` }).from(productsTable)
