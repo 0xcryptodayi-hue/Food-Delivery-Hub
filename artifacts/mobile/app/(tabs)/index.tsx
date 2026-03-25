@@ -421,13 +421,8 @@ function CategoryModal({
       onPanResponderRelease: (_, g) => {
         if (g.dy > 80 || g.vy > 0.5) {
           isDragClosing.current = true;
-          Animated.parallel([
-            Animated.timing(dragAnim, { toValue: 600, duration: 200, useNativeDriver: true }),
-            Animated.timing(backdropAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
-          ]).start(() => {
-            dragAnim.setValue(0);
-            onClose();
-          });
+          dragAnim.setValue(0);
+          onClose();
         } else {
           Animated.spring(dragAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 260 }).start();
         }
