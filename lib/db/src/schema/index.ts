@@ -7,3 +7,5 @@ export * from "./chat";
 export * from "./wallet";
 export * from "./notifications";
 export * from "./ads";
+export * from "./hygiene_ratings";
+export * from "./support_tickets";

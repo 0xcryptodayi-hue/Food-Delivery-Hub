@@ -190,6 +190,13 @@ export default function ProfileScreen() {
       )}
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Destek</Text>
+        <View style={styles.menuCard}>
+          <MenuItem icon="help-circle" label="Müşteri Hizmetleri" value="S.S.S. ve destek talepleri" onPress={() => router.push("/support")} />
+        </View>
+      </View>
+
+      <View style={styles.section}>
         <View style={styles.menuCard}>
           <MenuItem icon="log-out" label="Çıkış Yap" onPress={handleLogout} danger />
         </View>

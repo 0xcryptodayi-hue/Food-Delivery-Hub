@@ -12,6 +12,8 @@ import usersRouter from "./users.js";
 import notificationsRouter from "./notifications.js";
 import uploadRouter from "./upload.js";
 import adsRouter from "./ads.js";
+import hygieneRouter from "./hygiene.js";
+import supportRouter from "./support.js";
 
 const router = Router();
 
@@ -28,5 +30,7 @@ router.use("/users", usersRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/upload", uploadRouter);
 router.use("/ads", adsRouter);
+router.use("/hygiene", hygieneRouter);
+router.use("/support", supportRouter);
 
 export default router;

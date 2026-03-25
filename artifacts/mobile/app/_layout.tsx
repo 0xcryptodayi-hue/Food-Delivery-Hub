@@ -41,6 +41,7 @@ function RootLayoutNav() {
       <Stack.Screen name="seller/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
       <Stack.Screen name="checkout" options={{ headerShown: false, presentation: "modal", gestureEnabled: true, fullScreenGestureEnabled: true }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
+      <Stack.Screen name="support" options={{ headerShown: false, presentation: "card", gestureEnabled: true, fullScreenGestureEnabled: true }} />
     </Stack>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Platform, ActivityIndicator, Alert, Modal, TextInput,
@@ -23,7 +23,7 @@ const STATUS_ICONS: Record<string, string> = {
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const { data: order, isLoading, refetch } = useGetOrder(parseInt(id ?? "0"));
@@ -37,9 +37,26 @@ export default function OrderDetailScreen() {
   const [reviewed, setReviewed] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
+  const [hygieneRating, setHygieneRating] = useState(5);
+  const [hygieneComment, setHygieneComment] = useState("");
+  const [hygieneSubmitting, setHygieneSubmitting] = useState(false);
+  const [hygieneRated, setHygieneRated] = useState(false);
+  const [showHygieneModal, setShowHygieneModal] = useState(false);
+
   const isSeller = user?.id === order?.sellerId;
   const isBuyer = user?.id === order?.buyerId;
   const canReview = isBuyer && order?.status === "delivered" && !reviewed;
+  const canRateHygiene = isBuyer && order?.status === "delivered" && !hygieneRated;
+
+  useEffect(() => {
+    if (!order || !user || !isBuyer || order.status !== "delivered") return;
+    fetch(`${process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : ""}/api/hygiene/check/${order.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.rated) setHygieneRated(true); })
+      .catch(() => {});
+  }, [order?.id, order?.status, user?.id]);
 
   const NEXT_STATUS: Record<string, string> = {
     received: "preparing",
@@ -86,6 +103,26 @@ export default function OrderDetailScreen() {
       Alert.alert("Hata", "Değerlendirme gönderilemedi");
     } finally {
       setReviewLoading(false);
+    }
+  };
+
+  const handleHygieneSubmit = async () => {
+    if (!order) return;
+    setHygieneSubmitting(true);
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : ""}/api/hygiene`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sellerId: order.sellerId, orderId: order.id, score: hygieneRating, comment: hygieneComment || undefined }),
+      });
+      if (!res.ok) throw new Error();
+      setHygieneRated(true);
+      setShowHygieneModal(false);
+      Alert.alert("Teşekkürler!", "Hijyen değerlendirmeniz gönderildi.");
+    } catch {
+      Alert.alert("Hata", "Hijyen değerlendirmesi gönderilemedi");
+    } finally {
+      setHygieneSubmitting(false);
     }
   };
 
@@ -225,6 +262,30 @@ export default function OrderDetailScreen() {
           </View>
         )}
 
+        {canRateHygiene && (
+          <View style={styles.section}>
+            <Pressable style={[styles.reviewBanner, styles.hygieneBanner]} onPress={() => setShowHygieneModal(true)}>
+              <View style={styles.hygieneIconWrap}>
+                <Feather name="shield" size={20} color="#10B981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.reviewBannerTitle, { color: "#10B981" }]}>Hijyen Değerlendirmesi</Text>
+                <Text style={styles.reviewBannerText}>Satıcının temizlik ve hijyenini puanlayın</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color="#10B981" />
+            </Pressable>
+          </View>
+        )}
+
+        {hygieneRated && (
+          <View style={styles.section}>
+            <View style={[styles.reviewBanner, { backgroundColor: "#10B98115" }]}>
+              <Feather name="shield" size={20} color="#10B981" />
+              <Text style={[styles.reviewBannerTitle, { color: "#10B981" }]}>Hijyen Değerlendirmesi Gönderildi</Text>
+            </View>
+          </View>
+        )}
+
         {statusHistory.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Durum Geçmişi</Text>
@@ -338,6 +399,61 @@ export default function OrderDetailScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.submitBtnText}>Değerlendirimi Gönder</Text>
+              )}
+            </Pressable>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Hygiene Rating Modal */}
+      <Modal visible={showHygieneModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.reviewModal, { paddingTop: topInset + 24 }]}>
+          <View style={styles.reviewHeader}>
+            <Pressable onPress={() => setShowHygieneModal(false)} hitSlop={8}>
+              <Feather name="x" size={22} color={Colors.light.text} />
+            </Pressable>
+            <Text style={styles.reviewTitle}>Hijyen Değerlendirmesi</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+            <View style={styles.hygieneInfoBox}>
+              <Feather name="shield" size={18} color="#10B981" />
+              <Text style={styles.hygieneInfoText}>
+                Satıcının temizliğini, ambalajını ve hijyenini değerlendirin. Bu puan diğer alıcılara yol gösterir.
+              </Text>
+            </View>
+            <Text style={styles.reviewSellerName}>{order?.sellerName}</Text>
+            <Text style={styles.reviewSubtitle}>Hijyen puanı</Text>
+            <View style={styles.starRow}>
+              {[1, 2, 3, 4, 5].map(s => (
+                <Pressable key={s} onPress={() => setHygieneRating(s)} hitSlop={8}>
+                  <Ionicons name="shield" size={40} color={s <= hygieneRating ? "#10B981" : Colors.light.border} />
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.ratingHint}>
+              {hygieneRating === 1 ? "Çok Kötü" : hygieneRating === 2 ? "Kötü" : hygieneRating === 3 ? "Orta" : hygieneRating === 4 ? "İyi" : "Mükemmel"}
+            </Text>
+            <Text style={styles.fieldLabel}>Yorum (opsiyonel)</Text>
+            <TextInput
+              style={[styles.commentInput, { borderColor: "#10B98140" }]}
+              placeholder="Ambalaj, temizlik veya hijyen hakkında yazın..."
+              placeholderTextColor={Colors.light.textMuted}
+              value={hygieneComment}
+              onChangeText={setHygieneComment}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            <Pressable
+              style={[styles.submitBtn, { backgroundColor: "#10B981" }, hygieneSubmitting && { opacity: 0.7 }]}
+              onPress={handleHygieneSubmit}
+              disabled={hygieneSubmitting}
+            >
+              {hygieneSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitBtnText}>Hijyen Puanını Gönder</Text>
               )}
             </Pressable>
           </ScrollView>

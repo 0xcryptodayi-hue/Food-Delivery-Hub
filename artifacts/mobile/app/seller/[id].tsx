@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Platform, ActivityIndicator, Image,
@@ -185,6 +185,8 @@ const reviewStyles = StyleSheet.create({
   ratingPillText: { fontSize: 11, fontFamily: "Inter_700Bold" },
 });
 
+type HygieneData = { avgScore: number | null; totalCount: number };
+
 export default function SellerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -192,6 +194,7 @@ export default function SellerScreen() {
   const { addItem } = useCart();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const [reviewsExpanded, setReviewsExpanded] = useState(false);
+  const [hygieneData, setHygieneData] = useState<HygieneData | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
   const productsY = useRef(0);
@@ -204,6 +207,15 @@ export default function SellerScreen() {
   const { data: seller, isLoading: sellerLoading } = useGetUser(parseInt(id ?? "0"));
   const { data: products, isLoading: productsLoading } = useGetUserProducts(parseInt(id ?? "0"));
   const { data: reviewsRaw } = useGetSellerReviews(parseInt(id ?? "0"));
+
+  useEffect(() => {
+    const sellerId = parseInt(id ?? "0");
+    if (!sellerId) return;
+    fetch(`${process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : ""}/api/hygiene/seller/${sellerId}`)
+      .then(r => r.json())
+      .then(d => setHygieneData(d))
+      .catch(() => {});
+  }, [id]);
   const createConv = useCreateConversation();
 
   const reviews = (reviewsRaw ?? []) as Review[];
@@ -290,6 +302,16 @@ export default function SellerScreen() {
               <Text style={styles.statLabel}>{reviews.length} Yorum</Text>
               <Feather name="chevron-down" size={10} color={Colors.light.textMuted} style={{ marginTop: 2 }} />
             </Pressable>
+          )}
+          {hygieneData && hygieneData.avgScore != null && (
+            <View style={[styles.statBox, styles.hygieneBox]}>
+              <View style={styles.statTop}>
+                <Feather name="shield" size={14} color="#10B981" />
+                <Text style={[styles.statValue, { color: "#10B981" }]}>{hygieneData.avgScore.toFixed(1)}</Text>
+              </View>
+              <Text style={styles.statLabel}>Hijyen</Text>
+              <Text style={styles.hygieneCount}>{hygieneData.totalCount} değ.</Text>
+            </View>
           )}
           <Pressable
             style={({ pressed }) => [styles.statBox, pressed && styles.statBoxPressed]}
@@ -437,6 +459,8 @@ const styles = StyleSheet.create({
   statTop: { flexDirection: "row", alignItems: "center", gap: 4 },
   statValue: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
   statLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
+  hygieneBox: { borderColor: "#10B98130", backgroundColor: "#10B98108" },
+  hygieneCount: { fontSize: 9, fontFamily: "Inter_400Regular", color: "#10B981", marginTop: 1 },
 
   messageBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,
