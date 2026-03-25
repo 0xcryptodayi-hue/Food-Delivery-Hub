@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Platform, ActivityIndicator, Alert, Modal, TextInput,
+  Platform, ActivityIndicator, Alert, Modal, TextInput, KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -321,6 +321,7 @@ export default function OrderDetailScreen() {
       )}
 
       <Modal visible={showReview} animationType="slide" presentationStyle="pageSheet">
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={[styles.reviewModal, { paddingTop: topInset + 24 }]}>
           <View style={styles.reviewHeader}>
             <Pressable onPress={() => setShowReview(false)} hitSlop={8}>
@@ -403,10 +404,12 @@ export default function OrderDetailScreen() {
             </Pressable>
           </ScrollView>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Hygiene Rating Modal */}
       <Modal visible={showHygieneModal} animationType="slide" presentationStyle="pageSheet">
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={[styles.reviewModal, { paddingTop: topInset + 24 }]}>
           <View style={styles.reviewHeader}>
             <Pressable onPress={() => setShowHygieneModal(false)} hitSlop={8}>
@@ -458,6 +461,7 @@ export default function OrderDetailScreen() {
             </Pressable>
           </ScrollView>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
