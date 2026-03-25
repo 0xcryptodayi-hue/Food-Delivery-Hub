@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   centered: {},
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingBottom: 16,
+    paddingHorizontal: 16, paddingBottom: 16,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,

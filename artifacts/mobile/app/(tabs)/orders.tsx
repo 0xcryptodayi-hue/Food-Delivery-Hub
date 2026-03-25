@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16,
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16,
     backgroundColor: "#FEF3E2",
     borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
     ...Platform.select({

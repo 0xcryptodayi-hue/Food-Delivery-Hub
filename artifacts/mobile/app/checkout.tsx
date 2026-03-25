@@ -207,7 +207,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { alignItems: "center", justifyContent: "center", gap: 16 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 16 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16 },
   headerTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
   backBtn: { position: "absolute", top: 0, left: 20 },
   emptyEmoji: { fontSize: 64 },

@@ -127,7 +127,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   header: {
-    paddingHorizontal: 20, paddingBottom: 16,
+    paddingHorizontal: 16, paddingBottom: 16,
     backgroundColor: "#FEF3E2",
     borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
     ...Platform.select({
