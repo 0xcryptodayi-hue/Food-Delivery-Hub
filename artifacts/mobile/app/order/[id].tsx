@@ -44,6 +44,13 @@ export default function OrderDetailScreen() {
   const [reviewed, setReviewed] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (showReview && order?.items?.length) {
+      const firstPid = (order.items[0] as { productId?: number }).productId ?? null;
+      setSelectedProductId(firstPid);
+    }
+  }, [showReview]);
+
   const [hygieneRating, setHygieneRating] = useState(5);
   const [hygieneComment, setHygieneComment] = useState("");
   const [hygieneSubmitting, setHygieneSubmitting] = useState(false);
@@ -368,16 +375,8 @@ export default function OrderDetailScreen() {
 
             {items.length > 0 && (
               <View style={{ marginBottom: 24 }}>
-                <Text style={styles.fieldLabel}>Ürün seçin (opsiyonel)</Text>
+                <Text style={styles.fieldLabel}>Değerlendireceğiniz ürün</Text>
                 <View style={{ gap: 8, marginTop: 8 }}>
-                  <Pressable
-                    style={[styles.productSelectBtn, selectedProductId === null && styles.productSelectBtnActive]}
-                    onPress={() => setSelectedProductId(null)}
-                  >
-                    <Text style={[styles.productSelectText, selectedProductId === null && styles.productSelectTextActive]}>
-                      Tüm sipariş (satıcı)
-                    </Text>
-                  </Pressable>
                   {items.map((item, i) => {
                     const pid = (item as { productId?: number }).productId ?? null;
                     return (
