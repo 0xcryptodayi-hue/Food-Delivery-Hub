@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, hygieneRatingsTable, ordersTable, usersTable } from "@workspace/db";
-import { eq, avg, count, and } from "drizzle-orm";
+import { eq, avg, count, and, isNull } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const router = Router();
@@ -26,8 +26,8 @@ function computePlatformScore(decl: {
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { sellerId, orderId, score, comment } = req.body;
-    if (!sellerId || !orderId || !score) {
-      res.status(400).json({ error: "sellerId, orderId ve score zorunludur" });
+    if (!sellerId || !score) {
+      res.status(400).json({ error: "sellerId ve score zorunludur" });
       return;
     }
     if (score < 1 || score > 5) {
@@ -35,33 +35,45 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    const [order] = await db.select().from(ordersTable)
-      .where(and(eq(ordersTable.id, orderId), eq(ordersTable.buyerId, req.userId!)))
-      .limit(1);
-
-    if (!order) {
-      res.status(403).json({ error: "Bu siparişi değerlendirme yetkiniz yok" });
-      return;
-    }
-    if (order.status !== "delivered") {
-      res.status(400).json({ error: "Yalnızca teslim edilen siparişler değerlendirilebilir" });
-      return;
-    }
-
-    const existing = await db.select({ id: hygieneRatingsTable.id })
-      .from(hygieneRatingsTable)
-      .where(and(eq(hygieneRatingsTable.orderId, orderId), eq(hygieneRatingsTable.buyerId, req.userId!)))
-      .limit(1);
-
-    if (existing.length > 0) {
-      res.status(409).json({ error: "Bu sipariş için zaten hijyen değerlendirmesi yapılmış" });
-      return;
+    if (orderId) {
+      const [order] = await db.select().from(ordersTable)
+        .where(and(eq(ordersTable.id, orderId), eq(ordersTable.buyerId, req.userId!)))
+        .limit(1);
+      if (!order) {
+        res.status(403).json({ error: "Bu siparişi değerlendirme yetkiniz yok" });
+        return;
+      }
+      if (order.status !== "delivered") {
+        res.status(400).json({ error: "Yalnızca teslim edilen siparişler değerlendirilebilir" });
+        return;
+      }
+      const existing = await db.select({ id: hygieneRatingsTable.id })
+        .from(hygieneRatingsTable)
+        .where(and(eq(hygieneRatingsTable.orderId, orderId), eq(hygieneRatingsTable.buyerId, req.userId!)))
+        .limit(1);
+      if (existing.length > 0) {
+        res.status(409).json({ error: "Bu sipariş için zaten hijyen değerlendirmesi yapılmış" });
+        return;
+      }
+    } else {
+      const existing = await db.select({ id: hygieneRatingsTable.id })
+        .from(hygieneRatingsTable)
+        .where(and(
+          eq(hygieneRatingsTable.sellerId, sellerId),
+          eq(hygieneRatingsTable.buyerId, req.userId!),
+          isNull(hygieneRatingsTable.orderId),
+        ))
+        .limit(1);
+      if (existing.length > 0) {
+        res.status(409).json({ error: "Bu satıcı için zaten hijyen değerlendirmesi yapılmış" });
+        return;
+      }
     }
 
     const [rating] = await db.insert(hygieneRatingsTable).values({
       sellerId,
       buyerId: req.userId!,
-      orderId,
+      orderId: orderId ?? null,
       score,
       comment: comment ?? null,
     }).returning();

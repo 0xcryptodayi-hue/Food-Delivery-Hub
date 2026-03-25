@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Platform, ActivityIndicator, Image,
+  Platform, ActivityIndicator, Image, Modal, TextInput, KeyboardAvoidingView, Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -204,11 +204,16 @@ type HygieneData = {
 export default function SellerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { addItem } = useCart();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const [reviewsExpanded, setReviewsExpanded] = useState(false);
   const [hygieneData, setHygieneData] = useState<HygieneData | null>(null);
+  const [showHygieneModal, setShowHygieneModal] = useState(false);
+  const [hygieneRating, setHygieneRating] = useState(5);
+  const [hygieneComment, setHygieneComment] = useState("");
+  const [hygieneSubmitting, setHygieneSubmitting] = useState(false);
+  const [hygieneRated, setHygieneRated] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const productsY = useRef(0);
@@ -244,6 +249,33 @@ export default function SellerScreen() {
       router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
     } catch {
       router.push("/(tabs)/messages");
+    }
+  };
+
+  const handleHygieneSubmit = async () => {
+    if (!user) { router.push("/auth"); return; }
+    setHygieneSubmitting(true);
+    try {
+      const res = await fetch(`${getBaseUrl()}/api/hygiene`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sellerId: parseInt(id ?? "0"), score: hygieneRating, comment: hygieneComment || undefined }),
+      });
+      if (res.status === 409) {
+        Alert.alert("Zaten Değerlendirildi", "Bu satıcı için daha önce hijyen değerlendirmesi yaptınız.");
+        setShowHygieneModal(false);
+        setHygieneRated(true);
+        return;
+      }
+      if (!res.ok) throw new Error("Hata");
+      setHygieneRated(true);
+      setShowHygieneModal(false);
+      fetch(`${getBaseUrl()}/api/hygiene/seller/${parseInt(id ?? "0")}`)
+        .then(r => r.json()).then(d => setHygieneData(d)).catch(() => {});
+    } catch {
+      Alert.alert("Hata", "Değerlendirme gönderilemedi. Lütfen tekrar deneyin.");
+    } finally {
+      setHygieneSubmitting(false);
     }
   };
 
@@ -319,7 +351,17 @@ export default function SellerScreen() {
             </Pressable>
           )}
           {hygieneData != null && (
-            <View style={[styles.statBox, styles.hygieneBox]}>
+            <Pressable
+              style={({ pressed }) => [styles.statBox, styles.hygieneBox, pressed && styles.statBoxPressed]}
+              onPress={() => {
+                if (!user) { router.push("/auth"); return; }
+                if (hygieneRated) {
+                  Alert.alert("Zaten Değerlendirildi", "Bu satıcı için hijyen değerlendirmesi yaptınız.");
+                  return;
+                }
+                setShowHygieneModal(true);
+              }}
+            >
               <View style={styles.statTop}>
                 <Feather name="shield" size={14} color="#10B981" />
                 {hygieneData.platformScore != null && hygieneData.platformScore > 0 ? (
@@ -332,10 +374,11 @@ export default function SellerScreen() {
               </View>
               <Text style={styles.statLabel}>Hijyen</Text>
               <Text style={styles.hygieneCount}>
-                {hygieneData.platformScore != null && hygieneData.platformScore > 0 ? "Doğrulandı" :
-                 hygieneData.totalCount > 0 ? `${hygieneData.totalCount} değ.` : "Profil Yok"}
+                {hygieneRated ? "Değerlendirildi" :
+                 hygieneData.platformScore != null && hygieneData.platformScore > 0 ? "Doğrulandı" :
+                 hygieneData.totalCount > 0 ? `${hygieneData.totalCount} değ.` : "Puan Ver"}
               </Text>
-            </View>
+            </Pressable>
           )}
           <Pressable
             style={({ pressed }) => [styles.statBox, pressed && styles.statBoxPressed]}
@@ -487,6 +530,79 @@ export default function SellerScreen() {
         )}
       </View>
     </ScrollView>
+
+    {/* Hygiene Rating Modal */}
+    <Modal
+      visible={showHygieneModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowHygieneModal(false)}
+    >
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <Pressable style={hygieneModalStyles.backdrop} onPress={() => setShowHygieneModal(false)} />
+        <View style={hygieneModalStyles.sheet}>
+          <View style={hygieneModalStyles.handle} />
+          <View style={hygieneModalStyles.header}>
+            <View style={hygieneModalStyles.iconWrap}>
+              <Feather name="shield" size={22} color="#10B981" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={hygieneModalStyles.title}>Hijyen Değerlendirmesi</Text>
+              <Text style={hygieneModalStyles.subtitle}>{seller?.name}</Text>
+            </View>
+            <Pressable onPress={() => setShowHygieneModal(false)} hitSlop={10}>
+              <Feather name="x" size={20} color={Colors.light.textMuted} />
+            </Pressable>
+          </View>
+
+          <Text style={hygieneModalStyles.label}>Hijyen Puanı</Text>
+          <View style={hygieneModalStyles.starsRow}>
+            {[1, 2, 3, 4, 5].map(s => (
+              <Pressable key={s} onPress={() => setHygieneRating(s)} hitSlop={8}>
+                <Ionicons
+                  name={s <= hygieneRating ? "star" : "star-outline"}
+                  size={36}
+                  color={s <= hygieneRating ? "#10B981" : Colors.light.border}
+                />
+              </Pressable>
+            ))}
+          </View>
+          <Text style={hygieneModalStyles.ratingLabel}>
+            {hygieneRating === 5 ? "Mükemmel" :
+             hygieneRating === 4 ? "İyi" :
+             hygieneRating === 3 ? "Orta" :
+             hygieneRating === 2 ? "Kötü" : "Çok Kötü"}
+          </Text>
+
+          <Text style={hygieneModalStyles.label}>Yorum (isteğe bağlı)</Text>
+          <TextInput
+            style={hygieneModalStyles.input}
+            value={hygieneComment}
+            onChangeText={setHygieneComment}
+            placeholder="Hijyen hakkındaki görüşlerinizi paylaşın..."
+            placeholderTextColor={Colors.light.textMuted}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+
+          <Pressable
+            style={({ pressed }) => [hygieneModalStyles.submitBtn, pressed && { opacity: 0.85 }]}
+            onPress={handleHygieneSubmit}
+            disabled={hygieneSubmitting}
+          >
+            {hygieneSubmitting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Feather name="check-circle" size={18} color="#fff" />
+                <Text style={hygieneModalStyles.submitText}>Değerlendirmeyi Gönder</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   </View>
   );
 }
@@ -597,4 +713,47 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary + "12", borderWidth: 1, borderColor: Colors.light.primary + "30",
   },
   showMoreText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.light.primary },
+});
+
+const hygieneModalStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  sheet: {
+    backgroundColor: Colors.light.background,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingHorizontal: 20, paddingBottom: 36, paddingTop: 12,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 20 },
+      android: { elevation: 16 },
+    }),
+  },
+  handle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.light.border,
+    alignSelf: "center", marginBottom: 20,
+  },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 },
+  iconWrap: {
+    width: 44, height: 44, borderRadius: 14, backgroundColor: "#10B98120",
+    alignItems: "center", justifyContent: "center",
+  },
+  title: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, marginTop: 2 },
+  label: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.light.textSecondary, marginBottom: 12 },
+  starsRow: { flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: 8 },
+  ratingLabel: {
+    fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#10B981",
+    textAlign: "center", marginBottom: 24,
+  },
+  input: {
+    backgroundColor: Colors.light.surface, borderRadius: 14, padding: 14,
+    fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.text,
+    borderWidth: 1, borderColor: Colors.light.borderLight,
+    minHeight: 80, marginBottom: 24,
+  },
+  submitBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    backgroundColor: "#10B981", borderRadius: 16, paddingVertical: 15,
+  },
+  submitText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" },
 });
