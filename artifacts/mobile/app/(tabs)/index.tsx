@@ -14,18 +14,16 @@ import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
 
 const CATEGORIES = [
-  { slug: "all",         name: "Tümü" },
-  { slug: "borek",       name: "Börek", subcategories: ["Sigara böreği", "Paçanga böreği", "Su böreği", "Ispanaklı börek", "Kıymalı börek"] },
-  { slug: "pogaca",      name: "Poğaça" },
-  { slug: "baklava",     name: "Baklava" },
-  { slug: "kurabiye",    name: "Kurabiye" },
-  { slug: "sarma",       name: "Sarma / Dolma" },
-  { slug: "icli-kofte",  name: "İçli Köfte" },
-  { slug: "manti",       name: "Mantı" },
-  { slug: "soup",        name: "Çorba" },
-  { slug: "main-dish",   name: "Ana Yemek" },
-  { slug: "breakfast",   name: "Kahvaltılık" },
-  { slug: "dessert",     name: "Diğer Tatlılar" },
+  { slug: "all",        name: "Tümü" },
+  { slug: "borek",      name: "Börek",        subcategories: ["Sigara böreği", "Paçanga böreği", "Su böreği", "Ispanaklı börek", "Kıymalı börek", "Patatesli börek"] },
+  { slug: "pogaca",     name: "Poğaça",       subcategories: ["Peynirli poğaça", "Zeytinli poğaça", "Patatesli poğaça", "Sucuklu poğaça", "Sade poğaça"] },
+  { slug: "baklava",    name: "Baklava",      subcategories: ["Fıstıklı baklava", "Cevizli baklava", "Sütlü baklava", "Fındıklı baklava", "Burma baklava"] },
+  { slug: "kurabiye",   name: "Kurabiye",     subcategories: ["Tereyağlı kurabiye", "Cevizli kurabiye", "Limonlu kurabiye", "Çikolatalı kurabiye", "Nohut unu kurabiyesi"] },
+  { slug: "sarma",      name: "Sarma / Dolma", subcategories: ["Zeytinyağlı yaprak sarma", "Etli yaprak sarma", "Biber dolması", "Patlıcan dolması", "Kabak dolması"] },
+  { slug: "icli-kofte", name: "İçli Köfte",   subcategories: ["Kızartma içli köfte", "Haşlama içli köfte", "Fırın içli köfte"] },
+  { slug: "manti",      name: "Mantı",        subcategories: ["Kayseri mantısı", "Sulu mantı", "Kızartma mantı", "Fırın mantı"] },
+  { slug: "soup",       name: "Çorba",        subcategories: ["Mercimek çorbası", "Ezogelin çorbası", "Tarhana çorbası", "Domates çorbası", "Yayla çorbası"] },
+  { slug: "dessert",    name: "Tatlılar",     subcategories: ["Sütlaç", "Kazandibi", "Lokma", "Revani", "Kadayıf", "Şekerpare"] },
 ];
 
 type Product = {
@@ -223,19 +221,6 @@ export default function HomeScreen() {
           <Text style={styles.subtitle}>Bugün ne yemek istersiniz?</Text>
         </View>
         <View style={styles.headerActions}>
-          {/* Kategori simgesi */}
-          <Pressable
-            style={[styles.iconBtn, selectedCategory !== "all" && styles.iconBtnActive]}
-            onPress={() => setShowCategories(true)}
-          >
-            <Feather
-              name="grid"
-              size={20}
-              color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.text}
-            />
-            {selectedCategory !== "all" && <View style={styles.activeDot} />}
-          </Pressable>
-
           {/* Bildirim */}
           <Pressable
             style={styles.iconBtn}
@@ -256,6 +241,19 @@ export default function HomeScreen() {
                 <Text style={styles.cartBadgeText}>{itemCount > 9 ? "9+" : itemCount}</Text>
               </View>
             )}
+          </Pressable>
+
+          {/* Kategori simgesi - en sağda */}
+          <Pressable
+            style={[styles.iconBtn, selectedCategory !== "all" && styles.iconBtnActive]}
+            onPress={() => setShowCategories(true)}
+          >
+            <Feather
+              name="grid"
+              size={20}
+              color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.text}
+            />
+            {selectedCategory !== "all" && <View style={styles.activeDot} />}
           </Pressable>
         </View>
       </View>
