@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Platform, TextInput, ActivityIndicator, Alert,
+  Platform, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -136,6 +136,10 @@ export default function SupportScreen() {
   };
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
     <View style={[styles.container, { paddingTop: topInset }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -288,6 +292,7 @@ export default function SupportScreen() {
         </ScrollView>
       )}
     </View>
+    </KeyboardAvoidingView>
   );
 }
 
