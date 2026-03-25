@@ -47,7 +47,7 @@ function VitrinCard({ product, onPress }: { product: Product; onPress: () => voi
     <TouchableOpacity style={vitrinStyles.card} onPress={onPress} activeOpacity={0.88}>
       <View style={vitrinStyles.badge}>
         <Feather name="zap" size={9} color="#fff" />
-        <Text style={vitrinStyles.badgeText}>Vitrin</Text>
+        <Text style={vitrinStyles.badgeText}>Öne Çıkan</Text>
       </View>
       <View style={vitrinStyles.imageBox}>
         <Text style={vitrinStyles.imageEmoji}>🍽️</Text>
@@ -68,7 +68,15 @@ function VitrinCard({ product, onPress }: { product: Product; onPress: () => voi
   );
 }
 
-function VitrinSection({ products, onProductPress }: { products: Product[]; onProductPress: (id: number) => void }) {
+function VitrinSection({
+  products,
+  onProductPress,
+  isSeller,
+}: {
+  products: Product[];
+  onProductPress: (id: number) => void;
+  isSeller: boolean;
+}) {
   if (products.length === 0) return null;
   return (
     <View style={vitrinStyles.section}>
@@ -77,12 +85,14 @@ function VitrinSection({ products, onProductPress }: { products: Product[]; onPr
           <View style={vitrinStyles.sectionIcon}>
             <Feather name="zap" size={14} color="#fff" />
           </View>
-          <Text style={vitrinStyles.sectionTitle}>Vitrin</Text>
+          <Text style={vitrinStyles.sectionTitle}>Öne Çıkanlar</Text>
           <View style={vitrinStyles.sponsorBadge}>
             <Text style={vitrinStyles.sponsorBadgeText}>Sponsorlu</Text>
           </View>
         </View>
-        <Text style={vitrinStyles.sectionSub}>Öne çıkmak için reklam verin →</Text>
+        {isSeller && (
+          <Text style={vitrinStyles.sectionSub}>Öne çıkmak için reklam verin →</Text>
+        )}
       </View>
       <ScrollView
         horizontal
@@ -100,24 +110,11 @@ function VitrinSection({ products, onProductPress }: { products: Product[]; onPr
 const vitrinStyles = StyleSheet.create({
   section: {
     marginBottom: 20,
-    backgroundColor: "#FFFBF5",
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: "#F5D78E",
-    overflow: "hidden",
-    ...Platform.select({
-      ios: { shadowColor: "rgba(200,130,0,0.2)", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 12 },
-      android: { elevation: 4 },
-      web: { boxShadow: "0 4px 16px rgba(200,130,0,0.15)" },
-    }),
   },
   sectionHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingHorizontal: 4,
+    paddingTop: 4,
     paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F5D78E",
-    backgroundColor: "#FFF8E7",
   },
   sectionTitleRow: {
     flexDirection: "row",
@@ -481,6 +478,7 @@ export default function HomeScreen() {
                 <VitrinSection
                   products={sponsoredProducts}
                   onProductPress={id => router.push({ pathname: "/product/[id]", params: { id } })}
+                  isSeller={!!user?.isSeller}
                 />
               )}
 
