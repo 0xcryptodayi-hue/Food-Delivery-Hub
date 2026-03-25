@@ -88,7 +88,9 @@ function VitrinSection({
           <Text style={vitrinStyles.sectionTitle}>Öne Çıkanlar</Text>
         </View>
         {isSeller && (
-          <Text style={vitrinStyles.sectionSub}>Öne çıkmak için reklam verin →</Text>
+          <Pressable onPress={() => router.push("/advertise")} hitSlop={8}>
+            <Text style={vitrinStyles.sectionSub}>Öne çıkmak için reklam verin →</Text>
+          </Pressable>
         )}
       </View>
       <ScrollView
