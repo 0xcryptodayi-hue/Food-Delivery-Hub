@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, Platform } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, Platform, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -27,7 +27,11 @@ function SellerCard({ seller, onPress }: { seller: Seller; onPress: () => void }
       onPress={onPress}
     >
       <View style={styles.sellerAvatar}>
-        <Text style={styles.sellerAvatarText}>{seller.name[0]?.toUpperCase()}</Text>
+        {seller.avatar ? (
+          <Image source={{ uri: seller.avatar }} style={styles.sellerAvatarImage} />
+        ) : (
+          <Text style={styles.sellerAvatarText}>{seller.name[0]?.toUpperCase()}</Text>
+        )}
       </View>
 
       <View style={styles.sellerInfo}>
@@ -136,7 +140,9 @@ const styles = StyleSheet.create({
   sellerAvatar: {
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: Colors.light.primary + "20", alignItems: "center", justifyContent: "center",
+    overflow: "hidden",
   },
+  sellerAvatarImage: { width: 56, height: 56, borderRadius: 28 },
   sellerAvatarText: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.light.primary },
   sellerInfo: { flex: 1 },
   sellerNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
