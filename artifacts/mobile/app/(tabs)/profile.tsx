@@ -114,7 +114,9 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 80 }}
     >
-      <Text style={styles.title}>Profil</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Profil</Text>
+      </View>
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
@@ -208,7 +210,18 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { alignItems: "center", justifyContent: "center", gap: 16 },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.light.text, paddingHorizontal: 20, marginBottom: 16 },
+  header: {
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16,
+    backgroundColor: "#FEF3E2",
+    borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
+    marginBottom: 16,
+    ...Platform.select({
+      ios: { shadowColor: "rgba(180,80,10,0.12)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 3 },
+      web: { boxShadow: "0 3px 10px rgba(180,80,10,0.10)" },
+    }),
+  },
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.light.text },
 
   profileCard: {
     flexDirection: "row", alignItems: "center", gap: 14,

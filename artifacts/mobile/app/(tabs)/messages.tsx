@@ -94,7 +94,9 @@ export default function MessagesScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: topInset }]}>
-      <Text style={styles.title}>Mesajlar</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Mesajlar</Text>
+      </View>
 
       {isLoading ? (
         <View style={{ paddingHorizontal: 20, gap: 1 }}>
@@ -129,7 +131,17 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { alignItems: "center", justifyContent: "center", gap: 12 },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.light.text, paddingHorizontal: 20, marginBottom: 8 },
+  header: {
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16,
+    backgroundColor: "#FEF3E2",
+    borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(180,80,10,0.12)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 3 },
+      web: { boxShadow: "0 3px 10px rgba(180,80,10,0.10)" },
+    }),
+  },
+  title: { fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.light.text },
   convItem: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14, gap: 14 },
   avatar: { position: "relative" },
   avatarImage: { width: 52, height: 52, borderRadius: 26 },

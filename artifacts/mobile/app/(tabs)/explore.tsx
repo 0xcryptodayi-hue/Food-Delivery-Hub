@@ -126,7 +126,16 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
-  header: { paddingHorizontal: 20, paddingBottom: 16 },
+  header: {
+    paddingHorizontal: 20, paddingBottom: 16,
+    backgroundColor: "#FEF3E2",
+    borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(180,80,10,0.12)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 3 },
+      web: { boxShadow: "0 3px 10px rgba(180,80,10,0.10)" },
+    }),
+  },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", color: Colors.light.text },
   subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, marginTop: 2 },
   listContent: { paddingHorizontal: 20, paddingBottom: 100 },

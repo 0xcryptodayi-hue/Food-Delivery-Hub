@@ -83,7 +83,7 @@ function ProgressBar({ status }: { status: string }) {
 const progressStyles = StyleSheet.create({
   wrap: { paddingTop: 6, paddingBottom: 4 },
   track: {
-    height: 3, backgroundColor: "#F3F4F6", borderRadius: 2,
+    height: 3, backgroundColor: Colors.light.backgroundTertiary, borderRadius: 2,
     marginHorizontal: 22, marginBottom: 6, overflow: "hidden",
   },
   fill: { height: "100%", borderRadius: 2 },
@@ -91,17 +91,17 @@ const progressStyles = StyleSheet.create({
   stepItem: { alignItems: "center", gap: 3, width: 44 },
   dot: {
     width: 18, height: 18, borderRadius: 9,
-    borderWidth: 2, borderColor: "#E5E7EB",
-    backgroundColor: "#fff",
+    borderWidth: 2, borderColor: Colors.light.border,
+    backgroundColor: Colors.light.surface,
     alignItems: "center", justifyContent: "center",
   },
   dotActive: {
     width: 18, height: 18, borderRadius: 9,
-    backgroundColor: "#fff", borderWidth: 2,
+    backgroundColor: Colors.light.surface, borderWidth: 2,
     alignItems: "center", justifyContent: "center",
   },
   dotInner: { width: 7, height: 7, borderRadius: 4 },
-  stepLabel: { fontSize: 8, fontFamily: "Inter_500Medium", color: "#D1D5DB", textAlign: "center" },
+  stepLabel: { fontSize: 8, fontFamily: "Inter_500Medium", color: Colors.light.textMuted, textAlign: "center" },
 });
 
 function OrderCard({ order, isSeller, onPress }: { order: Order; isSeller: boolean; onPress: () => void }) {
@@ -200,13 +200,13 @@ function OrderCard({ order, isSeller, onPress }: { order: Order; isSeller: boole
 
 const cardStyles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.light.surface,
     borderRadius: 18,
     marginBottom: 14,
     flexDirection: "row",
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: Colors.light.borderLight,
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 12 },
       android: { elevation: 3 },
@@ -235,9 +235,9 @@ const cardStyles = StyleSheet.create({
   liveDot: { width: 5, height: 5, borderRadius: 3 },
   liveText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
 
-  orderId: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#6B7280" },
+  orderId: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.light.textMuted },
 
-  divider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 12 },
+  divider: { height: 1, backgroundColor: Colors.light.borderLight, marginBottom: 12 },
 
   body: { gap: 10 },
 
@@ -247,12 +247,12 @@ const cardStyles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   partyInfo: { flex: 1 },
-  partyRole: { fontSize: 10, fontFamily: "Inter_400Regular", color: "#9CA3AF" },
-  partyName: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#111827", marginTop: 1 },
+  partyRole: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
+  partyName: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.light.text, marginTop: 1 },
 
   priceBlock: { alignItems: "flex-end" },
   priceValue: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  priceLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: "#9CA3AF", marginTop: 1 },
+  priceLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 1 },
 
   itemsBox: {
     flexDirection: "row", alignItems: "flex-start", gap: 7,
@@ -261,10 +261,10 @@ const cardStyles = StyleSheet.create({
   itemsText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium", lineHeight: 17 },
 
   dateRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  dateText: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#9CA3AF" },
+  dateText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
 
   progressWrap: {
-    borderTopWidth: 1, borderTopColor: "#F3F4F6", marginTop: 6, paddingTop: 10,
+    borderTopWidth: 1, borderTopColor: Colors.light.borderLight, marginTop: 6, paddingTop: 10,
   },
 
   cancelledBox: {
@@ -297,8 +297,8 @@ const summaryStyles = StyleSheet.create({
   card: {
     flex: 1, alignItems: "center", gap: 4,
     paddingVertical: 12, paddingHorizontal: 6,
-    borderRadius: 14, borderWidth: 1.5, borderColor: "#F3F4F6",
-    backgroundColor: "#fff",
+    borderRadius: 14, borderWidth: 1.5, borderColor: Colors.light.borderLight,
+    backgroundColor: Colors.light.surface,
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6 },
       android: { elevation: 1 },
@@ -309,8 +309,8 @@ const summaryStyles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 10,
     alignItems: "center", justifyContent: "center", marginBottom: 2,
   },
-  value: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#111827" },
-  label: { fontSize: 9, fontFamily: "Inter_500Medium", color: "#9CA3AF", textAlign: "center" },
+  value: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  label: { fontSize: 9, fontFamily: "Inter_500Medium", color: Colors.light.textMuted, textAlign: "center" },
 });
 
 export default function OrdersScreen() {
@@ -408,7 +408,7 @@ export default function OrdersScreen() {
         <View style={styles.summaryRow}>
           <SummaryCard
             icon="list" label="Tümü" value={stats.total}
-            color="#374151" bg="#F9FAFB"
+            color={Colors.light.text} bg={Colors.light.backgroundSecondary}
             onPress={() => setFilter("all")} active={filter === "all"}
           />
           <SummaryCard
@@ -504,25 +504,30 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8F9FB" },
+  container: { flex: 1, backgroundColor: Colors.light.background },
 
   header: {
     flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between",
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1, borderBottomColor: "#F3F4F6",
+    backgroundColor: "#FEF3E2",
+    borderBottomWidth: 1, borderBottomColor: "#F0D9B5",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(180,80,10,0.12)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 3 },
+      web: { boxShadow: "0 3px 10px rgba(180,80,10,0.10)" },
+    }),
   },
-  pageTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#111827", letterSpacing: -0.3 },
-  pageSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#9CA3AF", marginTop: 2 },
+  pageTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.light.text, letterSpacing: -0.3 },
+  pageSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, marginTop: 2 },
   refreshBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "#F9FAFB", alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "#F3F4F6",
+    backgroundColor: "rgba(255,255,255,0.65)", alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "#F0D9B5",
   },
 
   roleWrap: {
     flexDirection: "row", marginHorizontal: 16, marginTop: 14, marginBottom: 4,
-    backgroundColor: "#F3F4F6", borderRadius: 14, padding: 4,
+    backgroundColor: Colors.light.backgroundTertiary, borderRadius: 14, padding: 4,
   },
   roleBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
@@ -550,23 +555,23 @@ const styles = StyleSheet.create({
 
   skeletons: { paddingHorizontal: 16, paddingTop: 14, gap: 14 },
   skeletonCard: {
-    backgroundColor: "#fff", borderRadius: 18, flexDirection: "row",
-    overflow: "hidden", borderWidth: 1, borderColor: "#F3F4F6",
+    backgroundColor: Colors.light.surface, borderRadius: 18, flexDirection: "row",
+    overflow: "hidden", borderWidth: 1, borderColor: Colors.light.borderLight,
     height: 140,
   },
-  skeletonAccent: { width: 4, backgroundColor: "#E5E7EB" },
+  skeletonAccent: { width: 4, backgroundColor: Colors.light.border },
   skeletonBody: { flex: 1, padding: 14, gap: 10 },
-  skeletonLine1: { height: 24, backgroundColor: "#F3F4F6", borderRadius: 8, width: "55%" },
-  skeletonLine2: { height: 40, backgroundColor: "#F3F4F6", borderRadius: 8 },
-  skeletonLine3: { height: 16, backgroundColor: "#F3F4F6", borderRadius: 8, width: "40%" },
+  skeletonLine1: { height: 24, backgroundColor: Colors.light.backgroundTertiary, borderRadius: 8, width: "55%" },
+  skeletonLine2: { height: 40, backgroundColor: Colors.light.backgroundTertiary, borderRadius: 8 },
+  skeletonLine3: { height: 16, backgroundColor: Colors.light.backgroundTertiary, borderRadius: 8, width: "40%" },
 
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40, paddingTop: 60 },
   emptyIcon: {
     width: 72, height: 72, borderRadius: 24,
-    backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", marginBottom: 4,
+    backgroundColor: Colors.light.backgroundSecondary, alignItems: "center", justifyContent: "center", marginBottom: 4,
   },
-  emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#111827" },
-  emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#9CA3AF", textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
+  emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textMuted, textAlign: "center", lineHeight: 20 },
 
   clearBtn: {
     marginTop: 4, backgroundColor: Colors.light.primary,
