@@ -16,9 +16,16 @@ const STATUS_LABELS: Record<string, string> = {
   on_the_way: "Yolda", delivered: "Teslim Edildi", cancelled: "İptal",
 };
 const STATUS_ICONS: Record<string, string> = {
-  received: "check-circle", preparing: "loader", ready: "package",
+  received: "check-circle", preparing: "clock", ready: "package",
   on_the_way: "truck", delivered: "home", cancelled: "x-circle",
 };
+const STEP_DISPLAY = [
+  { key: "received",   label: "Alındı",       icon: "check-circle" },
+  { key: "preparing",  label: "Hazırlanıyor", icon: "clock"        },
+  { key: "ready",      label: "Hazır",        icon: "package"      },
+  { key: "on_the_way", label: "Yolda",        icon: "truck"        },
+  { key: "delivered",  label: "Teslim",       icon: "home"         },
+];
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -161,22 +168,46 @@ export default function OrderDetailScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.statusCard}>
-          <View style={styles.stepTrack}>
-            {STATUS_STEPS.filter(s => s !== "cancelled").map((step, i) => (
-              <React.Fragment key={step}>
-                <View style={[styles.stepDot, i <= currentStepIndex && styles.stepDotActive]}>
-                  {i <= currentStepIndex ? (
-                    <Feather name="check" size={12} color="#fff" />
-                  ) : (
-                    <View style={styles.stepDotInner} />
-                  )}
-                </View>
-                {i < STATUS_STEPS.length - 2 && (
-                  <View style={[styles.stepLine, i < currentStepIndex && styles.stepLineActive]} />
-                )}
-              </React.Fragment>
-            ))}
+          {/* Adım göstergesi */}
+          <View style={styles.stepTrackWrap}>
+            {/* Arka plan çizgisi */}
+            <View style={styles.stepTrackBg} />
+            {/* Dolu çizgi */}
+            <View style={[styles.stepTrackFill, {
+              width: `${(currentStepIndex / (STEP_DISPLAY.length - 1)) * 80}%` as any,
+            }]} />
+            {/* Adım ikonları */}
+            <View style={styles.stepRow}>
+              {STEP_DISPLAY.map((step, i) => {
+                const done = i <= currentStepIndex;
+                const active = i === currentStepIndex;
+                return (
+                  <View key={step.key} style={styles.stepCol}>
+                    <View style={[
+                      styles.stepCircle,
+                      done && styles.stepCircleDone,
+                      active && styles.stepCircleActive,
+                    ]}>
+                      {done && !active ? (
+                        <Feather name="check" size={13} color={Colors.light.primary} />
+                      ) : active ? (
+                        <Feather name={step.icon as any} size={14} color={Colors.light.primary} />
+                      ) : (
+                        <Feather name={step.icon as any} size={13} color="rgba(255,255,255,0.45)" />
+                      )}
+                    </View>
+                    <Text style={[
+                      styles.stepLabel,
+                      done && styles.stepLabelDone,
+                    ]} numberOfLines={1}>
+                      {step.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
+
           <Text style={styles.currentStatus}>
             {STATUS_LABELS[order.status] ?? order.status}
           </Text>
@@ -487,15 +518,50 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.light.surface, alignItems: "center", justifyContent: "center" },
   statusCard: {
     backgroundColor: Colors.light.primary, marginHorizontal: 20, borderRadius: 20,
-    padding: 24, marginBottom: 20, alignItems: "center",
+    paddingHorizontal: 16, paddingTop: 24, paddingBottom: 20, marginBottom: 20, alignItems: "center",
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.primaryDark, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12 },
+      android: { elevation: 6 },
+      web: { boxShadow: "0 4px 20px rgba(196,82,26,0.35)" },
+    }),
   },
-  stepTrack: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-  stepDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
-  stepDotActive: { backgroundColor: "#fff" },
-  stepDotInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.5)" },
-  stepLine: { flex: 1, height: 2, backgroundColor: "rgba(255,255,255,0.3)", marginHorizontal: 4 },
-  stepLineActive: { backgroundColor: "#fff" },
-  currentStatus: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 4 },
+
+  stepTrackWrap: { alignSelf: "stretch", position: "relative", marginBottom: 16 },
+  stepTrackBg: {
+    position: "absolute", top: 17, left: "10%", right: "10%",
+    height: 3, backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 2,
+  },
+  stepTrackFill: {
+    position: "absolute", top: 17, left: "10%",
+    height: 3, backgroundColor: "#fff", borderRadius: 2,
+  },
+  stepRow: { flexDirection: "row" },
+  stepCol: { flex: 1, alignItems: "center", gap: 6 },
+  stepCircle: {
+    width: 34, height: 34, borderRadius: 17,
+    borderWidth: 2, borderColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center", justifyContent: "center",
+  },
+  stepCircleDone: {
+    backgroundColor: "#fff", borderColor: "#fff",
+  },
+  stepCircleActive: {
+    backgroundColor: "#fff", borderColor: "#fff",
+    ...Platform.select({
+      ios: { shadowColor: "#fff", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
+  },
+  stepLabel: {
+    fontSize: 8.5, fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.55)", textAlign: "center",
+  },
+  stepLabelDone: {
+    color: "#fff", fontFamily: "Inter_600SemiBold",
+  },
+
+  currentStatus: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 4, letterSpacing: -0.3 },
   etaText: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.8)" },
   section: { paddingHorizontal: 20, marginBottom: 16 },
   sectionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.text, marginBottom: 10 },

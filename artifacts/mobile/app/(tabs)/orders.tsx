@@ -406,15 +406,23 @@ export default function OrdersScreen() {
           {(["buyer", "seller"] as const).map(r => (
             <Pressable
               key={r}
-              style={[styles.roleBtn, role === r && styles.roleBtnActive]}
+              style={[
+                styles.roleBtn,
+                role === r && styles.roleBtnActive,
+                role !== r && r === "seller" && styles.roleBtnSellerInactive,
+              ]}
               onPress={() => { setRole(r); setFilter("all"); }}
             >
               <Feather
                 name={r === "buyer" ? "shopping-cart" : "package"}
                 size={14}
-                color={role === r ? "#fff" : Colors.light.textSecondary}
+                color={role === r ? "#fff" : r === "seller" ? Colors.light.primary : Colors.light.textSecondary}
               />
-              <Text style={[styles.roleBtnText, role === r && styles.roleBtnTextActive]}>
+              <Text style={[
+                styles.roleBtnText,
+                role === r && styles.roleBtnTextActive,
+                role !== r && r === "seller" && styles.roleBtnSellerText,
+              ]}>
                 {r === "buyer" ? "Aldıklarım" : "Sattıklarım"}
               </Text>
             </Pressable>
@@ -553,8 +561,13 @@ const styles = StyleSheet.create({
     gap: 7, paddingVertical: 10, borderRadius: 10,
   },
   roleBtnActive: { backgroundColor: Colors.light.primary },
+  roleBtnSellerInactive: {
+    borderWidth: 1.5, borderColor: Colors.light.primary,
+    backgroundColor: Colors.light.primary + "12",
+  },
   roleBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.textSecondary },
   roleBtnTextActive: { color: "#fff" },
+  roleBtnSellerText: { color: Colors.light.primary },
 
   summaryRow: {
     flexDirection: "row", gap: 8,
