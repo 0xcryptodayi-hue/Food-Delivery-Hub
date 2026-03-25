@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Platform, ActivityIndicator, Image,
@@ -193,6 +193,14 @@ export default function SellerScreen() {
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const [reviewsExpanded, setReviewsExpanded] = useState(false);
 
+  const scrollRef = useRef<ScrollView>(null);
+  const productsY = useRef(0);
+  const reviewsY = useRef(0);
+
+  const scrollTo = (y: number) => {
+    scrollRef.current?.scrollTo({ y: y - 16, animated: true });
+  };
+
   const { data: seller, isLoading: sellerLoading } = useGetUser(parseInt(id ?? "0"));
   const { data: products, isLoading: productsLoading } = useGetUserProducts(parseInt(id ?? "0"));
   const { data: reviewsRaw } = useGetSellerReviews(parseInt(id ?? "0"));
@@ -234,6 +242,7 @@ export default function SellerScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.container, { paddingTop: topInset }]}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 100 }}
@@ -270,18 +279,26 @@ export default function SellerScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           {avg != null && (
-            <View style={styles.statBox}>
+            <Pressable
+              style={({ pressed }) => [styles.statBox, pressed && styles.statBoxPressed]}
+              onPress={() => scrollTo(reviewsY.current)}
+            >
               <View style={styles.statTop}>
                 <Ionicons name="star" size={16} color={Colors.light.star} />
                 <Text style={styles.statValue}>{avg.toFixed(1)}</Text>
               </View>
               <Text style={styles.statLabel}>{reviews.length} Yorum</Text>
-            </View>
+              <Feather name="chevron-down" size={10} color={Colors.light.textMuted} style={{ marginTop: 2 }} />
+            </Pressable>
           )}
-          <View style={styles.statBox}>
+          <Pressable
+            style={({ pressed }) => [styles.statBox, pressed && styles.statBoxPressed]}
+            onPress={() => scrollTo(productsY.current)}
+          >
             <Text style={styles.statValue}>{products?.length ?? 0}</Text>
             <Text style={styles.statLabel}>Ürün</Text>
-          </View>
+            <Feather name="chevron-down" size={10} color={Colors.light.textMuted} style={{ marginTop: 2 }} />
+          </Pressable>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{seller.totalOrders}</Text>
             <Text style={styles.statLabel}>Sipariş</Text>
@@ -297,7 +314,7 @@ export default function SellerScreen() {
       </View>
 
       {/* Products */}
-      <View style={styles.section}>
+      <View style={styles.section} onLayout={e => { productsY.current = e.nativeEvent.layout.y; }}>
         <Text style={styles.sectionTitle}>
           Ürünler <Text style={styles.sectionCount}>({products?.length ?? 0})</Text>
         </Text>
@@ -325,7 +342,7 @@ export default function SellerScreen() {
       </View>
 
       {/* Reviews */}
-      <View style={styles.section}>
+      <View style={styles.section} onLayout={e => { reviewsY.current = e.nativeEvent.layout.y; }}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
             Değerlendirmeler <Text style={styles.sectionCount}>({reviews.length})</Text>
@@ -412,6 +429,10 @@ const styles = StyleSheet.create({
     alignItems: "center", backgroundColor: Colors.light.surface,
     paddingHorizontal: 18, paddingVertical: 12, borderRadius: 14,
     borderWidth: 1, borderColor: Colors.light.borderLight,
+  },
+  statBoxPressed: {
+    backgroundColor: Colors.light.primary + "10",
+    borderColor: Colors.light.primary + "40",
   },
   statTop: { flexDirection: "row", alignItems: "center", gap: 4 },
   statValue: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.text },
