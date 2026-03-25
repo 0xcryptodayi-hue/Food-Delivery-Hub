@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, ordersTable, productsTable, usersTable, walletTransactionsTable } from "@workspace/db";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, inArray } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const PLATFORM_FEE_RATE = 0.10;
@@ -14,14 +14,14 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
     const conditions = role === "seller"
       ? [eq(ordersTable.sellerId, req.userId!)]
       : [eq(ordersTable.buyerId, req.userId!)];
-    if (status) conditions.push(eq(ordersTable.status, status));
+    if (status) conditions.push(eq(ordersTable.status, status as typeof ordersTable.$inferSelect.status));
 
     const rows = await db.select().from(ordersTable).where(and(...conditions))
       .orderBy(ordersTable.createdAt);
 
     const userIds = [...new Set([...rows.map(r => r.buyerId), ...rows.map(r => r.sellerId)])];
     const users = userIds.length > 0
-      ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(or(...userIds.map(id => eq(usersTable.id, id))))
+      ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(inArray(usersTable.id, userIds))
       : [];
     const userMap = new Map(users.map(u => [u.id, u]));
 
@@ -119,28 +119,28 @@ router.get("/:id", requireAuth, async (req: AuthRequest, res) => {
 router.put("/:id/status", requireAuth, async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { status, estimatedTime, note } = req.body;
+    const { status, estimatedTime } = req.body;
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
     if (!order) { res.status(404).json({ error: "Order not found" }); return; }
     if (order.sellerId !== req.userId && order.buyerId !== req.userId) {
       res.status(403).json({ error: "Forbidden" }); return;
     }
 
-    const history = (order.statusHistory as Array<{ status: string; timestamp: string; note?: string }>) || [];
-    history.push({ status, timestamp: new Date().toISOString(), note });
-
-    const updates: Parameters<typeof db.update<typeof ordersTable>>[0] extends unknown ? Record<string, unknown> : never = {};
-    updates.status = status;
-    updates.statusHistory = history;
-    updates.updatedAt = new Date();
-    if (estimatedTime !== undefined) updates.estimatedTime = estimatedTime;
+    const history = (order.statusHistory as Array<{ status: string; timestamp: string }>) || [];
+    history.push({ status, timestamp: new Date().toISOString() });
 
     if (status === "delivered") {
       await db.update(walletTransactionsTable).set({ type: "earning" })
         .where(and(eq(walletTransactionsTable.orderId, id), eq(walletTransactionsTable.type, "pending")));
     }
 
-    const [updated] = await db.update(ordersTable).set(updates as Parameters<typeof db.update>[0] extends unknown ? never : never).where(eq(ordersTable.id, id)).returning();
+    const [updated] = await db.update(ordersTable).set({
+      status: status as typeof ordersTable.$inferSelect.status,
+      statusHistory: history,
+      updatedAt: new Date(),
+      ...(estimatedTime !== undefined ? { estimatedTime } : {}),
+    }).where(eq(ordersTable.id, id)).returning();
+
     const [buyer] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, order.buyerId)).limit(1);
     const [seller] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, order.sellerId)).limit(1);
     res.json({

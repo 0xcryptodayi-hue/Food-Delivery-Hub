@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, reviewsTable, usersTable, productsTable } from "@workspace/db";
-import { eq, avg, count } from "drizzle-orm";
+import { eq, avg, count, inArray } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const router = Router();
@@ -57,7 +57,8 @@ router.get("/seller/:sellerId", async (req, res) => {
 
     const buyerIds = [...new Set(rows.map(r => r.buyerId))];
     const buyers = buyerIds.length > 0
-      ? await db.select({ id: usersTable.id, name: usersTable.name, avatar: usersTable.avatar }).from(usersTable)
+      ? await db.select({ id: usersTable.id, name: usersTable.name, avatar: usersTable.avatar })
+        .from(usersTable).where(inArray(usersTable.id, buyerIds))
       : [];
     const buyerMap = new Map(buyers.map(b => [b.id, b]));
 
