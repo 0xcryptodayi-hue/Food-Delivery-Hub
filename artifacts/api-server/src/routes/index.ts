@@ -11,6 +11,7 @@ import walletRouter from "./wallet.js";
 import usersRouter from "./users.js";
 import notificationsRouter from "./notifications.js";
 import uploadRouter from "./upload.js";
+import adsRouter from "./ads.js";
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use("/wallet", walletRouter);
 router.use("/users", usersRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/upload", uploadRouter);
+router.use("/ads", adsRouter);
 
 export default router;

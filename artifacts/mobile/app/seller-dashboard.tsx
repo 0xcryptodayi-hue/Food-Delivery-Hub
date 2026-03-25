@@ -232,6 +232,13 @@ export default function SellerDashboardScreen() {
               <Feather name="message-circle" size={24} color={Colors.light.accent} />
               <Text style={styles.actionLabel}>Mesajlar</Text>
             </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.actionCard, pressed && { opacity: 0.85 }]}
+              onPress={() => router.push("/advertise")}
+            >
+              <Feather name="zap" size={24} color="#8B5CF6" />
+              <Text style={styles.actionLabel}>Reklam Ver</Text>
+            </Pressable>
           </View>
         </View>
 

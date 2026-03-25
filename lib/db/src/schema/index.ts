@@ -6,3 +6,4 @@ export * from "./favorites";
 export * from "./chat";
 export * from "./wallet";
 export * from "./notifications";
+export * from "./ads";
