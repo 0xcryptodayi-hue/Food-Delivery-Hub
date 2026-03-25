@@ -46,30 +46,46 @@ const STEPS = [
 function ProgressBar({ status }: { status: string }) {
   const meta = STATUS_META[status];
   if (!meta || meta.step === 0) return null;
-  const progress = ((meta.step - 1) / (STEPS.length - 1)) * 100;
+  const fillWidthPct = ((meta.step - 1) / (STEPS.length - 1)) * 80;
 
   return (
     <View style={progressStyles.wrap}>
-      <View style={progressStyles.track}>
-        <View style={[progressStyles.fill, { width: `${progress}%` as any, backgroundColor: meta.color }]} />
-      </View>
-      <View style={progressStyles.steps}>
+      {/* Track background — sits behind the circles */}
+      <View style={progressStyles.trackBg} />
+      <View style={[progressStyles.trackFill, {
+        width: `${fillWidthPct}%` as any,
+        backgroundColor: meta.color,
+      }]} />
+
+      {/* Step circles + labels */}
+      <View style={progressStyles.stepsRow}>
         {STEPS.map((step, i) => {
           const done = i + 1 <= meta.step;
           const active = i + 1 === meta.step;
           return (
-            <View key={i} style={progressStyles.stepItem}>
+            <View key={i} style={progressStyles.stepCol}>
               <View style={[
-                progressStyles.dot,
+                progressStyles.iconCircle,
                 done && { backgroundColor: meta.color, borderColor: meta.color },
-                active && progressStyles.dotActive,
+                active && {
+                  ...Platform.select({
+                    ios: { shadowColor: meta.color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 6 },
+                    android: { elevation: 4 },
+                  }),
+                },
               ]}>
-                {active && <View style={[progressStyles.dotInner, { backgroundColor: meta.color }]} />}
-                {done && !active && (
-                  <Feather name="check" size={8} color="#fff" />
+                {done && !active ? (
+                  <Feather name="check" size={13} color="#fff" />
+                ) : active ? (
+                  <Feather name={step.icon as any} size={14} color="#fff" />
+                ) : (
+                  <Feather name={step.icon as any} size={13} color={Colors.light.border} />
                 )}
               </View>
-              <Text style={[progressStyles.stepLabel, done && { color: meta.color }]} numberOfLines={1}>
+              <Text style={[
+                progressStyles.stepLabel,
+                done && { color: meta.color, fontFamily: "Inter_600SemiBold" },
+              ]} numberOfLines={1}>
                 {step.label}
               </Text>
             </View>
@@ -81,27 +97,30 @@ function ProgressBar({ status }: { status: string }) {
 }
 
 const progressStyles = StyleSheet.create({
-  wrap: { paddingTop: 6, paddingBottom: 4 },
-  track: {
+  wrap: { paddingTop: 10, paddingBottom: 4, position: "relative" },
+
+  trackBg: {
+    position: "absolute", top: 25, left: "10%", right: "10%",
     height: 3, backgroundColor: Colors.light.backgroundTertiary, borderRadius: 2,
-    marginHorizontal: 22, marginBottom: 6, overflow: "hidden",
   },
-  fill: { height: "100%", borderRadius: 2 },
-  steps: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 10 },
-  stepItem: { alignItems: "center", gap: 3, width: 44 },
-  dot: {
-    width: 18, height: 18, borderRadius: 9,
+  trackFill: {
+    position: "absolute", top: 25, left: "10%",
+    height: 3, borderRadius: 2,
+  },
+
+  stepsRow: { flexDirection: "row" },
+  stepCol: { flex: 1, alignItems: "center", gap: 6 },
+
+  iconCircle: {
+    width: 30, height: 30, borderRadius: 15,
     borderWidth: 2, borderColor: Colors.light.border,
     backgroundColor: Colors.light.surface,
     alignItems: "center", justifyContent: "center",
   },
-  dotActive: {
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: Colors.light.surface, borderWidth: 2,
-    alignItems: "center", justifyContent: "center",
+  stepLabel: {
+    fontSize: 8.5, fontFamily: "Inter_500Medium",
+    color: Colors.light.textMuted, textAlign: "center",
   },
-  dotInner: { width: 7, height: 7, borderRadius: 4 },
-  stepLabel: { fontSize: 8, fontFamily: "Inter_500Medium", color: Colors.light.textMuted, textAlign: "center" },
 });
 
 function OrderCard({ order, isSeller, onPress }: { order: Order; isSeller: boolean; onPress: () => void }) {
