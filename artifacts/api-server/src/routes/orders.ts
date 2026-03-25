@@ -1,10 +1,15 @@
 import { Router } from "express";
-import { db, ordersTable, productsTable, usersTable, walletTransactionsTable } from "@workspace/db";
-import { eq, and, or, inArray } from "drizzle-orm";
+import { db, ordersTable, productsTable, usersTable, walletTransactionsTable, notificationsTable } from "@workspace/db";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth.js";
 
 const PLATFORM_FEE_RATE = 0.10;
 const DELIVERY_FEE = 15;
+
+const STATUS_LABELS: Record<string, string> = {
+  received: "Alındı", preparing: "Hazırlanıyor", ready: "Hazır",
+  on_the_way: "Yolda", delivered: "Teslim Edildi", cancelled: "İptal",
+};
 
 const router = Router();
 
@@ -84,6 +89,14 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
     const [buyer] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
     const [seller] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, parseInt(sellerId))).limit(1);
 
+    await db.insert(notificationsTable).values({
+      userId: parseInt(sellerId),
+      title: "Yeni Sipariş! 🛒",
+      body: `${buyer?.name ?? "Bir müşteri"} sipariş verdi — ₺${totalAmount.toFixed(0)}`,
+      type: "order",
+      referenceId: order.id,
+    });
+
     res.status(201).json({
       ...order, buyerName: buyer?.name ?? "", sellerName: seller?.name ?? "",
       items: orderItems, statusHistory,
@@ -143,6 +156,16 @@ router.put("/:id/status", requireAuth, async (req: AuthRequest, res) => {
 
     const [buyer] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, order.buyerId)).limit(1);
     const [seller] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, order.sellerId)).limit(1);
+
+    const statusLabel = STATUS_LABELS[status] ?? status;
+    await db.insert(notificationsTable).values({
+      userId: order.buyerId,
+      title: `Sipariş Güncellendi`,
+      body: `Sipariş #${id} durumu: ${statusLabel}`,
+      type: "order",
+      referenceId: id,
+    });
+
     res.json({
       ...updated, buyerName: buyer?.name ?? "", sellerName: seller?.name ?? "",
       items: updated.items as unknown[], statusHistory: updated.statusHistory as unknown[],

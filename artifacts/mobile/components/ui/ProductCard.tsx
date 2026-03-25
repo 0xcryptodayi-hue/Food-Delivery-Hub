@@ -81,15 +81,13 @@ export function ProductCard({
           )}
         </View>
 
-        {onFavoritePress && (
-          <Pressable style={styles.favoriteBtn} onPress={onFavoritePress} hitSlop={10}>
-            <Ionicons
-              name={isFavorited ? "heart" : "heart-outline"}
-              size={20}
-              color={isFavorited ? Colors.light.accent : "#fff"}
-            />
-          </Pressable>
-        )}
+        <Pressable style={styles.favoriteBtn} onPress={onFavoritePress ?? onPress} hitSlop={10}>
+          <Ionicons
+            name={isFavorited ? "heart" : "heart-outline"}
+            size={20}
+            color={isFavorited ? Colors.light.accent : "#fff"}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.content}>
@@ -117,9 +115,9 @@ export function ProductCard({
           </View>
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>₺{price.toFixed(0)}</Text>
+            <Text style={styles.price} numberOfLines={1}>₺{price.toFixed(0)}</Text>
             {onAddToCart && remainingStock > 0 && (
-              <Pressable style={styles.addBtn} onPress={onAddToCart} hitSlop={6}>
+              <Pressable style={styles.addBtn} onPress={e => { e.stopPropagation?.(); onAddToCart(); }} hitSlop={6}>
                 <Feather name="plus" size={18} color="#fff" />
               </Pressable>
             )}
@@ -149,12 +147,12 @@ const styles = StyleSheet.create({
     }),
   },
   imageContainer: { position: "relative" },
-  image: { width: "100%", height: 190 },
+  image: { width: "100%", height: 180 },
   imagePlaceholder: { alignItems: "center", justifyContent: "center" },
-  imagePlaceholderEmoji: { fontSize: 64 },
+  imagePlaceholderEmoji: { fontSize: 56 },
   overlayRow: {
     position: "absolute", top: 12, left: 12,
-    flexDirection: "row", gap: 6,
+    flexDirection: "row", gap: 6, flexWrap: "wrap", maxWidth: "70%",
   },
   sponsoredBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
@@ -174,14 +172,14 @@ const styles = StyleSheet.create({
   },
   content: { padding: 14 },
   title: {
-    fontSize: 17, fontFamily: "Inter_700Bold",
+    fontSize: 16, fontFamily: "Inter_700Bold",
     color: Colors.light.text, marginBottom: 4,
   },
   description: {
     fontSize: 13, fontFamily: "Inter_400Regular",
-    color: Colors.light.textSecondary, marginBottom: 10, lineHeight: 19,
+    color: Colors.light.textSecondary, marginBottom: 8, lineHeight: 18,
   },
-  sellerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
+  sellerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
   sellerDot: {
     width: 6, height: 6, borderRadius: 3,
     backgroundColor: Colors.light.primary,
@@ -191,16 +189,16 @@ const styles = StyleSheet.create({
     color: Colors.light.textMuted, flex: 1,
   },
   footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  metaRow: { flexDirection: "row", gap: 10, alignItems: "center", flex: 1 },
+  metaRow: { flexDirection: "row", gap: 8, alignItems: "center", flex: 1, flexShrink: 1, minWidth: 0 },
   ratingChip: { flexDirection: "row", alignItems: "center", gap: 3 },
   ratingText: { fontSize: 12, fontFamily: "Inter_700Bold", color: Colors.light.text },
   reviewCountText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
   timeChip: { flexDirection: "row", alignItems: "center", gap: 3 },
   timeText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.light.textMuted },
-  priceRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  price: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.light.primary },
+  priceRow: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
+  price: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.light.primary },
   addBtn: {
-    backgroundColor: Colors.light.primary, borderRadius: 22,
-    width: 38, height: 38, alignItems: "center", justifyContent: "center",
+    backgroundColor: Colors.light.primary, borderRadius: 20,
+    width: 36, height: 36, alignItems: "center", justifyContent: "center",
   },
 });

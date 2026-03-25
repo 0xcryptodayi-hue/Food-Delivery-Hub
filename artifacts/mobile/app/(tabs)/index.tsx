@@ -5,12 +5,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetProducts } from "@workspace/api-client-react";
+import { useGetProducts, useGetFavorites, useToggleFavorite } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 const CATEGORIES = [
   { slug: "all", name: "Tümü", icon: "🏠" },
@@ -43,6 +44,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { addItem, itemCount } = useCart();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
@@ -52,6 +54,11 @@ export default function HomeScreen() {
     category: selectedCategory === "all" ? undefined : selectedCategory,
     limit: 30,
   });
+
+  const { data: favorites } = useGetFavorites({ query: { enabled: !!user } });
+  const toggleFav = useToggleFavorite();
+
+  const favoriteIds = new Set((favorites ?? []).map((f: { id: number }) => f.id));
 
   const products = (data?.products ?? []) as Product[];
 
@@ -72,6 +79,14 @@ export default function HomeScreen() {
     });
   };
 
+  const handleFavorite = (product: Product) => {
+    if (!user) { router.push("/auth"); return; }
+    toggleFav.mutate(
+      { data: { productId: product.id } },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["favorites"] }) }
+    );
+  };
+
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -84,17 +99,25 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.subtitle}>Bugün ne yemek istersiniz?</Text>
         </View>
-        <Pressable
-          style={styles.cartBtn}
-          onPress={() => user ? router.push("/checkout") : router.push("/auth")}
-        >
-          <Feather name="shopping-cart" size={20} color={itemCount > 0 ? Colors.light.primary : Colors.light.text} />
-          {itemCount > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{itemCount > 9 ? "9+" : itemCount}</Text>
-            </View>
-          )}
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            style={styles.iconBtn}
+            onPress={() => user ? router.push("/notifications") : router.push("/auth")}
+          >
+            <Feather name="bell" size={20} color={Colors.light.text} />
+          </Pressable>
+          <Pressable
+            style={styles.cartBtn}
+            onPress={() => user ? router.push("/checkout") : router.push("/auth")}
+          >
+            <Feather name="shopping-cart" size={20} color={itemCount > 0 ? Colors.light.primary : Colors.light.text} />
+            {itemCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{itemCount > 9 ? "9+" : itemCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.searchRow}>
@@ -149,9 +172,10 @@ export default function HomeScreen() {
           renderItem={({ item }) => (
             <ProductCard
               {...item}
-              isFavorited={false}
+              isFavorited={favoriteIds.has(item.id)}
               onPress={() => router.push({ pathname: "/product/[id]", params: { id: item.id } })}
               onAddToCart={() => handleAddToCart(item)}
+              onFavoritePress={() => handleFavorite(item)}
             />
           )}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomInset + 80 }]}
@@ -194,8 +218,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 14,
   },
   headerLeft: { flex: 1 },
+  headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   greeting: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.light.text },
   subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, marginTop: 2 },
+  iconBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: Colors.light.surface,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: Colors.light.borderLight,
+  },
   cartBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: Colors.light.surface,

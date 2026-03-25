@@ -18,7 +18,7 @@ type CartContextType = {
   clearCart: () => void;
   total: number;
   itemCount: number;
-  sellerId: number | null;
+  sellerIds: number[];
 };
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -26,13 +26,10 @@ const CartContext = createContext<CartContextType | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const sellerId = items.length > 0 ? items[0].sellerId : null;
+  const sellerIds = [...new Set(items.map(i => i.sellerId))];
 
   const addItem = (newItem: Omit<CartItem, "quantity">) => {
     setItems(prev => {
-      if (prev.length > 0 && prev[0].sellerId !== newItem.sellerId) {
-        return [{ ...newItem, quantity: 1 }];
-      }
       const existing = prev.find(i => i.productId === newItem.productId);
       if (existing) {
         return prev.map(i => i.productId === newItem.productId ? { ...i, quantity: i.quantity + 1 } : i);
@@ -59,7 +56,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, total, itemCount, sellerId }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, total, itemCount, sellerIds }}>
       {children}
     </CartContext.Provider>
   );

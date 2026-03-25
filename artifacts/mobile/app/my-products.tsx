@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, Platform,
-  TextInput, Alert, ActivityIndicator, ScrollView, Modal,
+  TextInput, Alert, ActivityIndicator, ScrollView, Modal, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import {
   useGetUserProducts, useCreateProduct, useUpdateProduct, useDeleteProduct,
+  getBaseUrl,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -29,6 +31,7 @@ type ProductFormData = {
   portion: string;
   dailyStock: string;
   prepTime: string;
+  imageUrl: string;
 };
 
 function ProductForm({
@@ -36,22 +39,83 @@ function ProductForm({
   onSave,
   onCancel,
   loading,
+  token,
 }: {
   initial?: ProductFormData;
   onSave: (data: ProductFormData) => void;
   onCancel: () => void;
   loading: boolean;
+  token?: string;
 }) {
   const [form, setForm] = useState<ProductFormData>(initial ?? {
     title: "", description: "", price: "",
     category: "main-dish", portion: "1 kişilik",
-    dailyStock: "10", prepTime: "30",
+    dailyStock: "10", prepTime: "30", imageUrl: "",
   });
+  const [uploading, setUploading] = useState(false);
 
   const set = (key: keyof ProductFormData, val: string) => setForm(f => ({ ...f, [key]: val }));
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("İzin Gerekli", "Fotoğraf seçmek için galeri erişimi gereklidir");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", {
+        uri: asset.uri,
+        type: asset.mimeType ?? "image/jpeg",
+        name: asset.fileName ?? "product.jpg",
+      } as unknown as Blob);
+
+      const res = await fetch(`${getBaseUrl()}/api/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
+      set("imageUrl", url);
+    } catch (e) {
+      Alert.alert("Hata", "Fotoğraf yüklenemedi. Lütfen tekrar deneyin.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.formScroll} keyboardShouldPersistTaps="handled">
+      <Text style={styles.fieldLabel}>Ürün Fotoğrafı</Text>
+      <Pressable style={styles.imagePicker} onPress={pickImage} disabled={uploading}>
+        {uploading ? (
+          <ActivityIndicator color={Colors.light.primary} />
+        ) : form.imageUrl ? (
+          <Image source={{ uri: form.imageUrl }} style={styles.imagePreview} resizeMode="cover" />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Feather name="camera" size={28} color={Colors.light.textMuted} />
+            <Text style={styles.imagePlaceholderText}>Fotoğraf Ekle</Text>
+          </View>
+        )}
+      </Pressable>
+      {form.imageUrl ? (
+        <Pressable onPress={() => set("imageUrl", "")} style={styles.removeImage}>
+          <Text style={styles.removeImageText}>Fotoğrafı Kaldır</Text>
+        </Pressable>
+      ) : null}
+
       <FormField label="Ürün Adı" value={form.title} onChange={v => set("title", v)} placeholder="Örn: Mercimek Çorbası" />
       <FormField label="Açıklama" value={form.description} onChange={v => set("description", v)} placeholder="Ürün açıklaması..." multiline />
       <FormField label="Fiyat (₺)" value={form.price} onChange={v => set("price", v)} placeholder="0" keyboardType="numeric" />
@@ -79,9 +143,9 @@ function ProductForm({
           <Text style={styles.cancelBtnText}>İptal</Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.9 }, loading && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.9 }, (loading || uploading) && { opacity: 0.7 }]}
           onPress={() => onSave(form)}
-          disabled={loading}
+          disabled={loading || uploading}
         >
           {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>Kaydet</Text>}
         </Pressable>
@@ -90,7 +154,10 @@ function ProductForm({
   );
 }
 
-function FormField({ label, value, onChange, placeholder, multiline, keyboardType }: any) {
+function FormField({ label, value, onChange, placeholder, multiline, keyboardType }: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder: string; multiline?: boolean; keyboardType?: "numeric" | "default";
+}) {
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -110,7 +177,7 @@ function FormField({ label, value, onChange, placeholder, multiline, keyboardTyp
 
 export default function MyProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<null | { id: number; data: ProductFormData }>(null);
@@ -130,6 +197,7 @@ export default function MyProductsScreen() {
         price: parseFloat(form.price), category: form.category,
         portion: form.portion, dailyStock: parseInt(form.dailyStock) || 10,
         prepTime: parseInt(form.prepTime) || 30,
+        imageUrl: form.imageUrl || undefined,
       };
       if (editProduct) {
         await updateProduct.mutateAsync({ id: editProduct.id, data: body });
@@ -192,6 +260,13 @@ export default function MyProductsScreen() {
           keyExtractor={item => String(item.id)}
           renderItem={({ item }) => (
             <View style={styles.productItem}>
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.productThumb} />
+              ) : (
+                <View style={[styles.productThumb, styles.productThumbEmpty]}>
+                  <Feather name="image" size={20} color={Colors.light.textMuted} />
+                </View>
+              )}
               <View style={styles.productInfo}>
                 <Text style={styles.productTitle}>{item.title}</Text>
                 <Text style={styles.productMeta}>₺{item.price} · {item.remainingStock}/{item.dailyStock} stok</Text>
@@ -206,7 +281,7 @@ export default function MyProductsScreen() {
                         title: item.title, description: item.description,
                         price: String(item.price), category: item.category,
                         portion: item.portion, dailyStock: String(item.dailyStock),
-                        prepTime: String(item.prepTime),
+                        prepTime: String(item.prepTime), imageUrl: item.imageUrl ?? "",
                       },
                     });
                     setShowModal(true);
@@ -242,6 +317,7 @@ export default function MyProductsScreen() {
             onSave={handleSave}
             onCancel={() => { setShowModal(false); setEditProduct(null); }}
             loading={formLoading}
+            token={token ?? undefined}
           />
         </View>
       </Modal>
@@ -261,8 +337,10 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingBottom: 100 },
   productItem: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.light.surface, borderRadius: 14, padding: 14, marginBottom: 8,
+    backgroundColor: Colors.light.surface, borderRadius: 14, padding: 12, marginBottom: 8,
   },
+  productThumb: { width: 52, height: 52, borderRadius: 10 },
+  productThumbEmpty: { backgroundColor: Colors.light.backgroundSecondary, alignItems: "center", justifyContent: "center" },
   productInfo: { flex: 1 },
   productTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
   productMeta: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, marginTop: 2 },
@@ -276,8 +354,17 @@ const styles = StyleSheet.create({
   addFirstBtn: { backgroundColor: Colors.light.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
   addFirstBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 15 },
   modal: { flex: 1, backgroundColor: Colors.light.background, paddingHorizontal: 20 },
-  modalTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 24, textAlign: "center" },
+  modalTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.light.text, marginBottom: 20, textAlign: "center" },
   formScroll: { flex: 1 },
+  imagePicker: {
+    height: 160, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.light.border,
+    borderStyle: "dashed", overflow: "hidden", marginBottom: 8,
+  },
+  imagePreview: { width: "100%", height: "100%" },
+  imagePlaceholder: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.light.backgroundSecondary },
+  imagePlaceholderText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.textMuted },
+  removeImage: { alignItems: "center", marginBottom: 16 },
+  removeImageText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.accent },
   fieldGroup: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary, marginBottom: 8 },
   fieldInput: {

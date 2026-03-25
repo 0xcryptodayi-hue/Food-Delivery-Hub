@@ -9,6 +9,8 @@ import favoritesRouter from "./favorites.js";
 import chatRouter from "./chat.js";
 import walletRouter from "./wallet.js";
 import usersRouter from "./users.js";
+import notificationsRouter from "./notifications.js";
+import uploadRouter from "./upload.js";
 
 const router = Router();
 
@@ -22,5 +24,7 @@ router.use("/favorites", favoritesRouter);
 router.use("/chat", chatRouter);
 router.use("/wallet", walletRouter);
 router.use("/users", usersRouter);
+router.use("/notifications", notificationsRouter);
+router.use("/upload", uploadRouter);
 
 export default router;

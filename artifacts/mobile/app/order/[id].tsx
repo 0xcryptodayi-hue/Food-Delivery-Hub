@@ -1,13 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Platform, ActivityIndicator, Alert,
+  Platform, ActivityIndicator, Alert, Modal, TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetOrder, useUpdateOrderStatus } from "@workspace/api-client-react";
+import { useGetOrder, useUpdateOrderStatus, useCreateReview } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 
 const STATUS_STEPS = ["received", "preparing", "ready", "on_the_way", "delivered"];
@@ -28,8 +28,17 @@ export default function OrderDetailScreen() {
 
   const { data: order, isLoading, refetch } = useGetOrder(parseInt(id ?? "0"));
   const updateStatus = useUpdateOrderStatus();
+  const createReview = useCreateReview();
+
+  const [showReview, setShowReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
 
   const isSeller = user?.id === order?.sellerId;
+  const isBuyer = user?.id === order?.buyerId;
+  const canReview = isBuyer && order?.status === "delivered" && !reviewed;
 
   const NEXT_STATUS: Record<string, string> = {
     received: "preparing",
@@ -54,6 +63,28 @@ export default function OrderDetailScreen() {
         },
       },
     ]);
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!order) return;
+    setReviewLoading(true);
+    try {
+      await createReview.mutateAsync({
+        data: {
+          rating: reviewRating,
+          comment: reviewComment || undefined,
+          sellerId: order.sellerId,
+          orderId: order.id,
+        },
+      });
+      setReviewed(true);
+      setShowReview(false);
+      Alert.alert("Teşekkürler!", "Değerlendirmeniz gönderildi.");
+    } catch {
+      Alert.alert("Hata", "Değerlendirme gönderilemedi");
+    } finally {
+      setReviewLoading(false);
+    }
   };
 
   if (isLoading) {
@@ -89,7 +120,7 @@ export default function OrderDetailScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.statusCard}>
           <View style={styles.stepTrack}>
             {STATUS_STEPS.filter(s => s !== "cancelled").map((step, i) => (
@@ -170,6 +201,28 @@ export default function OrderDetailScreen() {
           </View>
         )}
 
+        {canReview && (
+          <View style={styles.section}>
+            <Pressable style={styles.reviewBanner} onPress={() => setShowReview(true)}>
+              <Ionicons name="star" size={20} color={Colors.light.star} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reviewBannerTitle}>Deneyiminizi Paylaşın</Text>
+                <Text style={styles.reviewBannerText}>Satıcıyı değerlendirin ve yorum yapın</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={Colors.light.primary} />
+            </Pressable>
+          </View>
+        )}
+
+        {reviewed && (
+          <View style={styles.section}>
+            <View style={[styles.reviewBanner, { backgroundColor: Colors.light.success + "15" }]}>
+              <Ionicons name="checkmark-circle" size={20} color={Colors.light.success} />
+              <Text style={[styles.reviewBannerTitle, { color: Colors.light.success }]}>Değerlendirme Gönderildi</Text>
+            </View>
+          </View>
+        )}
+
         {statusHistory.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Durum Geçmişi</Text>
@@ -203,6 +256,61 @@ export default function OrderDetailScreen() {
           </Pressable>
         </View>
       )}
+
+      <Modal visible={showReview} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.reviewModal, { paddingTop: topInset + 24 }]}>
+          <View style={styles.reviewHeader}>
+            <Pressable onPress={() => setShowReview(false)} hitSlop={8}>
+              <Feather name="x" size={22} color={Colors.light.text} />
+            </Pressable>
+            <Text style={styles.reviewTitle}>Değerlendirme Yap</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+            <Text style={styles.reviewSellerName}>{order.sellerName}</Text>
+            <Text style={styles.reviewSubtitle}>Bu satıcıyı nasıl değerlendirirsiniz?</Text>
+
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map(s => (
+                <Pressable key={s} onPress={() => setReviewRating(s)} hitSlop={8}>
+                  <Ionicons
+                    name={s <= reviewRating ? "star" : "star-outline"}
+                    size={40}
+                    color={s <= reviewRating ? Colors.light.star : Colors.light.border}
+                  />
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.ratingLabel}>
+              {["", "Çok Kötü", "Kötü", "Orta", "İyi", "Mükemmel"][reviewRating]}
+            </Text>
+
+            <Text style={styles.fieldLabel}>Yorumunuz (opsiyonel)</Text>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Deneyiminizi paylaşın..."
+              placeholderTextColor={Colors.light.textMuted}
+              value={reviewComment}
+              onChangeText={setReviewComment}
+              multiline
+              numberOfLines={4}
+            />
+
+            <Pressable
+              style={[styles.submitBtn, reviewLoading && { opacity: 0.7 }]}
+              onPress={handleReviewSubmit}
+              disabled={reviewLoading}
+            >
+              {reviewLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitBtnText}>Değerlendirimi Gönder</Text>
+              )}
+            </Pressable>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -264,4 +372,30 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
   },
   updateBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
+  reviewBanner: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: Colors.light.star + "15", borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: Colors.light.star + "30",
+  },
+  reviewBannerTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text },
+  reviewBannerText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, marginTop: 2 },
+  reviewModal: { flex: 1, backgroundColor: Colors.light.background },
+  reviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingBottom: 20 },
+  reviewTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: Colors.light.text },
+  reviewSellerName: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.light.text, textAlign: "center", marginBottom: 8 },
+  reviewSubtitle: { fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, textAlign: "center", marginBottom: 24 },
+  starsRow: { flexDirection: "row", justifyContent: "center", gap: 8, marginBottom: 8 },
+  ratingLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.light.text, textAlign: "center", marginBottom: 28, height: 24 },
+  fieldLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.light.textSecondary, marginBottom: 8 },
+  commentInput: {
+    backgroundColor: Colors.light.surface, borderRadius: 14, padding: 14,
+    fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text,
+    borderWidth: 1, borderColor: Colors.light.border, height: 120, textAlignVertical: "top",
+    marginBottom: 24,
+  },
+  submitBtn: {
+    backgroundColor: Colors.light.primary, borderRadius: 16, paddingVertical: 18,
+    alignItems: "center", justifyContent: "center",
+  },
+  submitBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 17 },
 });

@@ -15,7 +15,7 @@ const DELIVERY_FEE = 15;
 
 export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
-  const { items, total, clearCart, sellerId } = useCart();
+  const { items, total, clearCart } = useCart();
   const { user } = useAuth();
   const [address, setAddress] = useState(user?.address ?? "");
   const [note, setNote] = useState("");
@@ -25,31 +25,41 @@ export default function CheckoutScreen() {
   const createOrderMutation = useCreateOrder();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
-  const grandTotal = total + DELIVERY_FEE;
-  const platformFee = total * 0.10;
+  const sellerGroups = items.reduce<Record<number, typeof items>>((acc, item) => {
+    if (!acc[item.sellerId]) acc[item.sellerId] = [];
+    acc[item.sellerId].push(item);
+    return acc;
+  }, {});
+
+  const numSellers = Object.keys(sellerGroups).length;
+  const grandTotal = total + DELIVERY_FEE * numSellers;
 
   const handleOrder = async () => {
     if (!address.trim()) {
       Alert.alert("Hata", "Lütfen teslimat adresini girin");
       return;
     }
-    if (!sellerId) { Alert.alert("Hata", "Sepet boş"); return; }
+    if (items.length === 0) { Alert.alert("Hata", "Sepet boş"); return; }
 
     setLoading(true);
     try {
-      await createOrderMutation.mutateAsync({
-        data: {
-          items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
-          deliveryAddress: address,
-          paymentMethod,
-          note: note || undefined,
-          sellerId,
-        },
-      });
+      for (const [sellerIdStr, sellerItems] of Object.entries(sellerGroups)) {
+        await createOrderMutation.mutateAsync({
+          data: {
+            items: sellerItems.map(i => ({ productId: i.productId, quantity: i.quantity })),
+            deliveryAddress: address,
+            paymentMethod,
+            note: note || undefined,
+            sellerId: parseInt(sellerIdStr),
+          },
+        });
+      }
       clearCart();
       Alert.alert(
         "Sipariş Verildi! 🎉",
-        "Siparişiniz alındı. Satıcı hazırlamaya başlayacak.",
+        numSellers > 1
+          ? `${numSellers} satıcıdan siparişiniz alındı.`
+          : "Siparişiniz alındı. Satıcı hazırlamaya başlayacak.",
         [{ text: "Siparişlerimi Gör", onPress: () => { router.back(); router.push("/(tabs)/orders"); } }]
       );
     } catch (err: unknown) {
@@ -88,16 +98,18 @@ export default function CheckoutScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sepet Özeti</Text>
-          <View style={styles.card}>
-            <Text style={styles.sellerLabel}>Satıcı: {items[0]?.sellerName}</Text>
-            {items.map(item => (
-              <View key={item.productId} style={styles.cartItem}>
-                <Text style={styles.itemQty}>{item.quantity}x</Text>
-                <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.itemPrice}>₺{(item.price * item.quantity).toFixed(0)}</Text>
-              </View>
-            ))}
-          </View>
+          {Object.entries(sellerGroups).map(([sellerIdStr, sellerItems]) => (
+            <View key={sellerIdStr} style={[styles.card, { marginBottom: 10 }]}>
+              <Text style={styles.sellerLabel}>Satıcı: {sellerItems[0]?.sellerName}</Text>
+              {sellerItems.map(item => (
+                <View key={item.productId} style={styles.cartItem}>
+                  <Text style={styles.itemQty}>{item.quantity}x</Text>
+                  <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.itemPrice}>₺{(item.price * item.quantity).toFixed(0)}</Text>
+                </View>
+              ))}
+            </View>
+          ))}
         </View>
 
         <View style={styles.section}>
@@ -160,8 +172,8 @@ export default function CheckoutScreen() {
               <Text style={styles.summaryValue}>₺{total.toFixed(0)}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Teslimat ücreti</Text>
-              <Text style={styles.summaryValue}>₺{DELIVERY_FEE}</Text>
+              <Text style={styles.summaryLabel}>Teslimat ({numSellers} satıcı)</Text>
+              <Text style={styles.summaryValue}>₺{(DELIVERY_FEE * numSellers).toFixed(0)}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
