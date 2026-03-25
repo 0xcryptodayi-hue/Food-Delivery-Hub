@@ -212,27 +212,38 @@ export default function HomeScreen() {
 
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: topInset + 8, paddingBottom: 10 }]}>
-        <View style={styles.headerLogoWrap}>
-          <Image
-            source={require("@/assets/images/logo.png")}
-            style={styles.headerLogo}
-            resizeMode="cover"
-          />
-        </View>
+        {/* Logo */}
+        <Image
+          source={require("@/assets/images/logo.png")}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
+
+        {/* Konum Seçici */}
+        <Pressable style={styles.locationPill} onPress={() => {}}>
+          <Feather name="map-pin" size={13} color={Colors.light.primary} />
+          <View style={styles.locationText}>
+            <Text style={styles.locationLabel}>Teslimat Adresi</Text>
+            <Text style={styles.locationValue} numberOfLines={1}>
+              İstanbul, Türkiye
+            </Text>
+          </View>
+          <Feather name="chevron-down" size={14} color={Colors.light.primaryDark} />
+        </Pressable>
+
+        {/* Eylem Butonları */}
         <View style={styles.headerActions}>
-          {/* Bildirim */}
           <Pressable
             style={styles.headerIconBtn}
             onPress={() => user ? router.push("/notifications") : router.push("/auth")}
           >
-            <Feather name="bell" size={20} color={Colors.light.primaryDark} />
+            <Feather name="bell" size={19} color={Colors.light.primaryDark} />
           </Pressable>
 
-          {/* Sepet */}
           <Pressable style={styles.headerIconBtn} onPress={() => router.push("/cart")}>
             <Feather
               name="shopping-cart"
-              size={20}
+              size={19}
               color={itemCount > 0 ? Colors.light.primary : Colors.light.primaryDark}
             />
             {itemCount > 0 && (
@@ -242,14 +253,13 @@ export default function HomeScreen() {
             )}
           </Pressable>
 
-          {/* Kategori simgesi */}
           <Pressable
             style={[styles.headerIconBtn, selectedCategory !== "all" && styles.headerIconBtnActive]}
             onPress={() => setShowCategories(true)}
           >
             <Feather
               name="grid"
-              size={20}
+              size={19}
               color={selectedCategory !== "all" ? Colors.light.primary : Colors.light.primaryDark}
             />
             {selectedCategory !== "all" && <View style={styles.activeDot} />}
@@ -371,13 +381,25 @@ const styles = StyleSheet.create({
       web: { boxShadow: "0 3px 10px rgba(140,100,20,0.12)" },
     }),
   },
-  headerLogoWrap: {
-    width: 64, height: 64,
-    borderRadius: 32,
-    overflow: "hidden",
-    backgroundColor: "#FCF1D5",
+  headerLogo: { width: 52, height: 52 },
+  locationPill: {
+    flex: 1,
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginHorizontal: 10,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderRadius: 14,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: "rgba(232,101,26,0.18)",
   },
-  headerLogo: { width: 64, height: 64 },
+  locationText: { flex: 1 },
+  locationLabel: {
+    fontSize: 10, fontFamily: "Inter_500Medium",
+    color: Colors.light.textMuted, letterSpacing: 0.3,
+  },
+  locationValue: {
+    fontSize: 13, fontFamily: "Inter_700Bold",
+    color: Colors.light.text, marginTop: 1,
+  },
   headerActions: { flexDirection: "row", gap: 4, alignItems: "center" },
   headerIconBtn: {
     width: 42, height: 42, borderRadius: 21,
