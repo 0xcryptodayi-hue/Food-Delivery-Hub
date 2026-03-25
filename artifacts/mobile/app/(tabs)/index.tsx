@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, TextInput,
-  RefreshControl, Platform, Modal, Animated, ScrollView,
+  RefreshControl, Platform, Modal, Animated, ScrollView, TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -41,6 +41,199 @@ type Product = {
   isSponsored: boolean;
   sellerId: number;
 };
+
+function VitrinCard({ product, onPress }: { product: Product; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={vitrinStyles.card} onPress={onPress} activeOpacity={0.88}>
+      <View style={vitrinStyles.badge}>
+        <Feather name="zap" size={9} color="#fff" />
+        <Text style={vitrinStyles.badgeText}>Vitrin</Text>
+      </View>
+      <View style={vitrinStyles.imageBox}>
+        <Text style={vitrinStyles.imageEmoji}>🍽️</Text>
+      </View>
+      <View style={vitrinStyles.info}>
+        <Text style={vitrinStyles.title} numberOfLines={2}>{product.title}</Text>
+        <Text style={vitrinStyles.seller} numberOfLines={1}>🏪 {product.sellerName}</Text>
+        <View style={vitrinStyles.priceRow}>
+          <Text style={vitrinStyles.price}>₺{product.price}</Text>
+          {product.rating != null && (
+            <View style={vitrinStyles.ratingPill}>
+              <Text style={vitrinStyles.ratingText}>★ {product.rating.toFixed(1)}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function VitrinSection({ products, onProductPress }: { products: Product[]; onProductPress: (id: number) => void }) {
+  if (products.length === 0) return null;
+  return (
+    <View style={vitrinStyles.section}>
+      <View style={vitrinStyles.sectionHeader}>
+        <View style={vitrinStyles.sectionTitleRow}>
+          <View style={vitrinStyles.sectionIcon}>
+            <Feather name="zap" size={14} color="#fff" />
+          </View>
+          <Text style={vitrinStyles.sectionTitle}>Vitrin</Text>
+          <View style={vitrinStyles.sponsorBadge}>
+            <Text style={vitrinStyles.sponsorBadgeText}>Sponsorlu</Text>
+          </View>
+        </View>
+        <Text style={vitrinStyles.sectionSub}>Öne çıkmak için reklam verin →</Text>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={vitrinStyles.scroll}
+      >
+        {products.map(p => (
+          <VitrinCard key={p.id} product={p} onPress={() => onProductPress(p.id)} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+const vitrinStyles = StyleSheet.create({
+  section: {
+    marginBottom: 20,
+    backgroundColor: "#FFFBF5",
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#F5D78E",
+    overflow: "hidden",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(200,130,0,0.2)", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 12 },
+      android: { elevation: 4 },
+      web: { boxShadow: "0 4px 16px rgba(200,130,0,0.15)" },
+    }),
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F5D78E",
+    backgroundColor: "#FFF8E7",
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionIcon: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: "#E8651A",
+    alignItems: "center", justifyContent: "center",
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: "#1A1008",
+    letterSpacing: 0.3,
+  },
+  sponsorBadge: {
+    backgroundColor: "#E8651A20",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  sponsorBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: "#C4521A",
+  },
+  sectionSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#A09080",
+  },
+  scroll: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  card: {
+    width: 150,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#F5D78E",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(180,100,0,0.15)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 3 },
+      web: { boxShadow: "0 3px 10px rgba(180,100,0,0.12)" },
+    }),
+  },
+  badge: {
+    position: "absolute",
+    top: 8, left: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#E8651A",
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    zIndex: 2,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+  },
+  imageBox: {
+    height: 100,
+    backgroundColor: "#FFF5E8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageEmoji: {
+    fontSize: 44,
+  },
+  info: {
+    padding: 10,
+  },
+  title: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#1A1008",
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  seller: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#A09080",
+    marginBottom: 6,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  price: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#E8651A",
+  },
+  ratingPill: {
+    backgroundColor: "#FFF5E8",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  ratingText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: "#C4521A",
+  },
+});
 
 function CategoryModal({
   visible,
@@ -177,6 +370,7 @@ export default function HomeScreen() {
 
   const favoriteIds = new Set((favorites ?? []).map((f: { id: number }) => f.id));
   const products = (data?.products ?? []) as Product[];
+  const sponsoredProducts = products.filter(p => p.isSponsored);
 
   const activeCat = CATEGORIES.find(c => c.slug === selectedCategory) ?? CATEGORIES[0];
 
@@ -281,14 +475,25 @@ export default function HomeScreen() {
             />
           }
           ListHeaderComponent={
-            products.length > 0 ? (
-              <View style={styles.listHeader}>
-                <Text style={styles.resultCount}>
-                  {selectedCategory === "all" ? "Tüm Yemekler" : activeCat?.name}
-                </Text>
-                <Text style={styles.resultCountSub}>{products.length} seçenek</Text>
-              </View>
-            ) : null
+            <>
+              {/* Vitrin — yalnızca "tümü" görünümünde ve arama yoksa */}
+              {selectedCategory === "all" && !search && (
+                <VitrinSection
+                  products={sponsoredProducts}
+                  onProductPress={id => router.push({ pathname: "/product/[id]", params: { id } })}
+                />
+              )}
+
+              {/* Bölüm başlığı */}
+              {products.length > 0 && (
+                <View style={styles.listHeader}>
+                  <Text style={styles.resultCount}>
+                    {selectedCategory === "all" ? "Tüm Yemekler" : activeCat?.name}
+                  </Text>
+                  <Text style={styles.resultCountSub}>{products.length} seçenek</Text>
+                </View>
+              )}
+            </>
           }
           ListEmptyComponent={
             <View style={styles.empty}>
