@@ -252,10 +252,120 @@ async function seed() {
   }
   console.log("✅ Hygiene ratings seeded");
 
+  // ── Extra demo buyers (fresh accounts, no reviews/hygiene yet) ──────────────
+  const extraBuyers = [
+    { name: "Ahmet Yılmaz",   email: "ahmet@demo.com",   phone: "05411111111", address: "Kadıköy, İstanbul",  lat: 40.991, lng: 29.028 },
+    { name: "Selin Kaya",     email: "selin@demo.com",    phone: "05422222222", address: "Şişli, İstanbul",    lat: 41.062, lng: 28.990 },
+    { name: "Burak Demir",    email: "burak@demo.com",    phone: "05433333333", address: "Üsküdar, İstanbul",  lat: 41.023, lng: 29.015 },
+    { name: "Yasemin Çelik",  email: "yasemin@demo.com",  phone: "05444444444", address: "Beşiktaş, İstanbul", lat: 41.044, lng: 29.006 },
+  ];
+
+  const extraBuyerIds: number[] = [];
+  for (const b of extraBuyers) {
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, b.email));
+    if (existing.length === 0) {
+      const [u] = await db.insert(usersTable).values({
+        ...b, role: "buyer", isSeller: false, passwordHash: hashPassword("demo123"),
+      }).returning();
+      extraBuyerIds.push(u.id);
+    } else {
+      extraBuyerIds.push(existing[0].id);
+    }
+  }
+  console.log("✅ Extra buyers seeded:", extraBuyerIds);
+
+  // ── Extra demo sellers ───────────────────────────────────────────────────────
+  const extraSellers = [
+    { name: "Halime Hanım",  email: "halime@demo.com",  phone: "05455555555", address: "Bakırköy, İstanbul", lat: 40.980, lng: 28.872, bio: "Ege mutfağını sevenler için zeytinyağlı yemekler ve börekler yapıyorum." },
+    { name: "Nurten Abla",   email: "nurten@demo.com",  phone: "05466666666", address: "Maltepe, İstanbul",  lat: 40.934, lng: 29.143, bio: "Karadeniz kökenli, mısır ekmeği ve hamsi böreği konusunda iddialıyım." },
+    { name: "Havva Teyze",   email: "havva@demo.com",   phone: "05477777777", address: "Bahçelievler, İstanbul", lat: 41.003, lng: 28.851, bio: "Tatlı işinde 15 yıl tecrübem var. Muhallebi ve Osmanlı tatlılarında uzmanım." },
+  ];
+
+  const extraSellerIds: number[] = [];
+  for (const s of extraSellers) {
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, s.email));
+    if (existing.length === 0) {
+      const [u] = await db.insert(usersTable).values({
+        ...s, role: "seller", isSeller: true, passwordHash: hashPassword("demo123"),
+        rating: 4.2 + Math.random() * 0.7,
+        reviewCount: Math.floor(Math.random() * 30) + 5,
+      }).returning();
+      extraSellerIds.push(u.id);
+    } else {
+      extraSellerIds.push(existing[0].id);
+    }
+  }
+  console.log("✅ Extra sellers seeded:", extraSellerIds);
+
+  // ── Products for extra sellers ───────────────────────────────────────────────
+  if (extraSellerIds.length > 0) {
+    const extraProducts = [
+      // Halime Hanım
+      { title: "Zeytinyağlı Enginar", description: "Zeytinyağında pişirilmiş, nohutlu taze enginar.", price: 70, category: "sarma", portion: "4 adet", dailyStock: 10, prepTime: 60, sellerId: extraSellerIds[0] },
+      { title: "Menemen Böreği", description: "İçinde menemen harcı olan ince yufkalı çıtır börek.", price: 65, category: "borek", portion: "6 dilim", dailyStock: 12, prepTime: 50, sellerId: extraSellerIds[0] },
+      { title: "Peynirli Tepsi Böreği", description: "Bol kaşarlı, katmerli el açması tepsi böreği.", price: 80, category: "borek", portion: "8 dilim", dailyStock: 8, prepTime: 80, sellerId: extraSellerIds[0] },
+      // Nurten Abla
+      { title: "Mısır Ekmeği", description: "Karadeniz usulü, tereyağıyla servis edilen mısır ekmeği.", price: 35, category: "pogaca", portion: "4 dilim", dailyStock: 20, prepTime: 40, sellerId: extraSellerIds[1] },
+      { title: "Hamsi Böreği", description: "Taze hamsi ve mısır unundan yapılan Karadeniz böreği.", price: 75, category: "borek", portion: "6 dilim", dailyStock: 8, prepTime: 60, sellerId: extraSellerIds[1] },
+      { title: "Fındıklı Kurabiye", description: "Karadeniz fındığıyla hazırlanmış ev yapımı kurabiye.", price: 60, category: "kurabiye", portion: "10 adet", dailyStock: 15, prepTime: 45, sellerId: extraSellerIds[1] },
+      // Havva Teyze
+      { title: "Muhallebi", description: "Gül suyu ve tarçınla servis edilen klasik muhallebi.", price: 40, category: "dessert", portion: "2 kişilik", dailyStock: 14, prepTime: 30, sellerId: extraSellerIds[2] },
+      { title: "Kemal Paşa", description: "Şerbetli, lor peynirli geleneksel Osmanlı tatlısı.", price: 45, category: "dessert", portion: "6 adet", dailyStock: 12, prepTime: 45, sellerId: extraSellerIds[2] },
+      { title: "Kadın Göbeği", description: "Şerbetli, ortası delik nefis Osmanlı tatlısı.", price: 50, category: "dessert", portion: "6 adet", dailyStock: 12, prepTime: 50, sellerId: extraSellerIds[2] },
+    ];
+    for (const p of extraProducts) {
+      await db.insert(productsTable).values({
+        ...p, remainingStock: p.dailyStock,
+        rating: 4.0 + Math.random() * 0.9,
+        reviewCount: Math.floor(Math.random() * 20) + 3,
+        isSponsored: false,
+      }).onConflictDoNothing();
+    }
+    console.log("✅ Extra seller products seeded");
+  }
+
+  // ── Delivered orders for extra buyers (no ratings yet — ready for testing) ───
+  const allProductsForOrders = await db.select().from(productsTable);
+  for (let bi = 0; bi < extraBuyerIds.length; bi++) {
+    const bId = extraBuyerIds[bi];
+    // Each extra buyer gets delivered orders from all 5 original sellers + extra sellers
+    const targetSellerIds = [...sellerIds, ...extraSellerIds];
+    for (let si = 0; si < targetSellerIds.length; si++) {
+      const sId = targetSellerIds[si];
+      const sellerProducts = allProductsForOrders.filter(p => p.sellerId === sId);
+      if (sellerProducts.length === 0) continue;
+      const product = sellerProducts[bi % sellerProducts.length];
+      // Check if already has an order from this seller
+      const existingOrder = await db.select({ id: ordersTable.id }).from(ordersTable)
+        .where(eq(ordersTable.buyerId, bId))
+        .limit(100);
+      const alreadyOrdered = existingOrder.some(() => false); // just insert, onConflict will skip
+      await db.insert(ordersTable).values({
+        status: "delivered",
+        totalAmount: product.price + 15,
+        deliveryFee: 15,
+        platformFee: product.price * 0.1,
+        sellerAmount: product.price * 0.9,
+        paymentMethod: "cash",
+        deliveryAddress: "İstanbul",
+        estimatedTime: 45,
+        buyerId: bId,
+        sellerId: sId,
+        items: [{ productId: product.id, productTitle: product.title, price: product.price, quantity: 1, imageUrl: product.imageUrl }],
+        statusHistory: [
+          { status: "received", timestamp: new Date(Date.now() - 86400000 * (si + 1)).toISOString() },
+          { status: "delivered", timestamp: new Date(Date.now() - 86400000 * si).toISOString() },
+        ],
+      });
+    }
+  }
+  console.log("✅ Extra buyer orders seeded (no ratings — ready for testing)");
+
   console.log("🎉 Seed complete!");
   console.log("Demo accounts (all password: demo123):");
-  console.log("  Alıcı  : buyer@demo.com");
-  console.log("  Satıcı : ayse@demo.com | fatma@demo.com | zeynep@demo.com | elif@demo.com | meryem@demo.com");
+  console.log("  Alıcılar : buyer@demo.com | ahmet@demo.com | selin@demo.com | burak@demo.com | yasemin@demo.com");
+  console.log("  Satıcılar: ayse@demo.com | fatma@demo.com | zeynep@demo.com | elif@demo.com | meryem@demo.com");
+  console.log("             halime@demo.com | nurten@demo.com | havva@demo.com");
   process.exit(0);
 }
 
