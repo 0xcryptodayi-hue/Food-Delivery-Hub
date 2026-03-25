@@ -15,6 +15,43 @@ router.get("/categories", async (req, res) => {
   }
 });
 
+router.get("/best-sellers", optionalAuth, async (req: AuthRequest, res) => {
+  try {
+    const limit = Math.min(20, Math.max(1, parseInt((req.query as Record<string, string>).limit ?? "10")));
+    const rows = await db
+      .select()
+      .from(productsTable)
+      .where(and(eq(productsTable.isAvailable, true), sql`${productsTable.reviewCount} > 0`))
+      .orderBy(desc(productsTable.reviewCount), desc(productsTable.rating))
+      .limit(limit);
+
+    const sellerIds = [...new Set(rows.map(r => r.sellerId))];
+    const sellers = sellerIds.length > 0
+      ? await db.select({ id: usersTable.id, name: usersTable.name, avatar: usersTable.avatar, rating: usersTable.rating })
+          .from(usersTable).where(inArray(usersTable.id, sellerIds))
+      : [];
+    const sellerMap = new Map(sellers.map(s => [s.id, s]));
+
+    const products = rows.map(p => {
+      const seller = sellerMap.get(p.sellerId);
+      return {
+        id: p.id, title: p.title, price: p.price,
+        imageUrl: p.imageUrl, category: p.category,
+        rating: p.rating, reviewCount: p.reviewCount,
+        sellerId: p.sellerId,
+        sellerName: seller?.name ?? "Unknown",
+        discountPercent: p.discountPercent ?? null,
+        isSponsored: p.isSponsored,
+      };
+    });
+
+    res.json(products);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.get("/sellers", optionalAuth, async (req: AuthRequest, res) => {
   try {
     const sellers = await db.select({

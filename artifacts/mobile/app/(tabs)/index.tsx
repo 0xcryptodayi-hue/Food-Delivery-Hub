@@ -1,13 +1,13 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable, TextInput,
-  RefreshControl, Platform, Modal, Animated, ScrollView, TouchableOpacity,
+  RefreshControl, Platform, Modal, Animated, ScrollView, TouchableOpacity, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetProducts, useGetFavorites, useToggleFavorite, getGetFavoritesQueryKey } from "@workspace/api-client-react";
+import { useGetProducts, useGetFavorites, useToggleFavorite, getGetFavoritesQueryKey, getBaseUrl } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { AppHeader } from "@/components/ui/AppHeader";
 import { useAuth } from "@/context/AuthContext";
@@ -232,6 +232,152 @@ const vitrinStyles = StyleSheet.create({
   },
 });
 
+type BestSeller = {
+  id: number;
+  title: string;
+  price: number;
+  imageUrl?: string | null;
+  category: string;
+  rating?: number | null;
+  reviewCount: number;
+  sellerName: string;
+  discountPercent?: number | null;
+};
+
+const RANK_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
+const RANK_LABELS = ["🥇", "🥈", "🥉"];
+
+function BestSellerCard({ product, rank, onPress }: { product: BestSeller; rank: number; onPress: () => void }) {
+  const hasDiscount = product.discountPercent != null && product.discountPercent > 0;
+  const discountedPrice = hasDiscount ? product.price * (1 - product.discountPercent! / 100) : product.price;
+
+  return (
+    <TouchableOpacity style={bsStyles.card} onPress={onPress} activeOpacity={0.88}>
+      {/* Rank medal */}
+      <View style={[bsStyles.rankBadge, rank < 3 && { backgroundColor: RANK_COLORS[rank] + "22", borderColor: RANK_COLORS[rank] }]}>
+        <Text style={bsStyles.rankEmoji}>{rank < 3 ? RANK_LABELS[rank] : `#${rank + 1}`}</Text>
+      </View>
+
+      {/* Image */}
+      <View style={bsStyles.imageBox}>
+        {product.imageUrl ? (
+          <Image source={{ uri: product.imageUrl }} style={bsStyles.image} resizeMode="cover" />
+        ) : (
+          <View style={bsStyles.imageEmpty}>
+            <Text style={bsStyles.imageEmoji}>🍽️</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={bsStyles.info}>
+        <Text style={bsStyles.title} numberOfLines={2}>{product.title}</Text>
+        <Text style={bsStyles.seller} numberOfLines={1}>🏪 {product.sellerName}</Text>
+
+        {/* Reviews count */}
+        <View style={bsStyles.statsRow}>
+          <Feather name="star" size={10} color="#F59E0B" />
+          <Text style={bsStyles.statsText}>{product.rating?.toFixed(1) ?? "—"}</Text>
+          <View style={bsStyles.dot} />
+          <Feather name="shopping-bag" size={10} color="#6B7280" />
+          <Text style={bsStyles.statsText}>{product.reviewCount} sipariş</Text>
+        </View>
+
+        <View style={bsStyles.priceRow}>
+          {hasDiscount ? (
+            <View>
+              <Text style={bsStyles.originalPrice}>₺{product.price.toFixed(0)}</Text>
+              <Text style={bsStyles.priceDiscount}>₺{discountedPrice.toFixed(0)}</Text>
+            </View>
+          ) : (
+            <Text style={bsStyles.price}>₺{product.price.toFixed(0)}</Text>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function BestSellersSection({ products, onProductPress }: { products: BestSeller[]; onProductPress: (id: number) => void }) {
+  if (products.length === 0) return null;
+  return (
+    <View style={bsStyles.section}>
+      <View style={bsStyles.sectionHeader}>
+        <View style={bsStyles.sectionTitleRow}>
+          <View style={bsStyles.sectionIcon}>
+            <Text style={{ fontSize: 13 }}>🔥</Text>
+          </View>
+          <Text style={bsStyles.sectionTitle}>En Çok Satanlar</Text>
+          <View style={bsStyles.freeBadge}>
+            <Text style={bsStyles.freeBadgeText}>Ücretsiz</Text>
+          </View>
+        </View>
+        <Text style={bsStyles.sectionSub}>Müşterilerin en çok tercih ettiği yemekler</Text>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={bsStyles.scroll}
+      >
+        {products.map((p, i) => (
+          <BestSellerCard key={p.id} product={p} rank={i} onPress={() => onProductPress(p.id)} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+const bsStyles = StyleSheet.create({
+  section: { marginBottom: 20 },
+  sectionHeader: { paddingHorizontal: 4, paddingTop: 4, paddingBottom: 10 },
+  sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  sectionIcon: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center", justifyContent: "center",
+  },
+  sectionTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#1A1008", letterSpacing: 0.3 },
+  freeBadge: { backgroundColor: "#D1FAE520", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: "#6EE7B7" },
+  freeBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#065F46" },
+  sectionSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#A09080" },
+  scroll: { paddingHorizontal: 14, paddingVertical: 14, gap: 12 },
+
+  card: {
+    width: 155,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    ...Platform.select({
+      ios: { shadowColor: "rgba(0,0,0,0.1)", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8 },
+      android: { elevation: 3 },
+      web: { boxShadow: "0 3px 10px rgba(0,0,0,0.08)" },
+    }),
+  },
+  rankBadge: {
+    position: "absolute", top: 8, left: 8,
+    zIndex: 2, borderRadius: 10, borderWidth: 1.5,
+    borderColor: "#E5E7EB", backgroundColor: "#fff",
+    paddingHorizontal: 7, paddingVertical: 3,
+    alignItems: "center", justifyContent: "center",
+  },
+  rankEmoji: { fontSize: 13 },
+  imageBox: { height: 100, backgroundColor: "#F9FAFB" },
+  image: { width: "100%", height: "100%" },
+  imageEmpty: { flex: 1, alignItems: "center", justifyContent: "center" },
+  imageEmoji: { fontSize: 40 },
+  info: { padding: 10 },
+  title: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#1A1008", marginBottom: 3, lineHeight: 18 },
+  seller: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#A09080", marginBottom: 5 },
+  statsRow: { flexDirection: "row", alignItems: "center", gap: 3, marginBottom: 6 },
+  statsText: { fontSize: 10, fontFamily: "Inter_500Medium", color: "#6B7280" },
+  dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#D1D5DB", marginHorizontal: 2 },
+  priceRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  price: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#E8651A" },
+  originalPrice: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#9CA3AF", textDecorationLine: "line-through" },
+  priceDiscount: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#E53935" },
+});
+
 function CategoryModal({
   visible,
   selected,
@@ -355,6 +501,7 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
+  const [bestSellers, setBestSellers] = useState<BestSeller[]>([]);
 
   const { data, isLoading, refetch } = useGetProducts({
     search: search || undefined,
@@ -365,6 +512,15 @@ export default function HomeScreen() {
   const { data: favorites } = useGetFavorites({ query: { enabled: !!user } });
   const toggleFav = useToggleFavorite();
 
+  const fetchBestSellers = useCallback(async () => {
+    try {
+      const res = await fetch(`${getBaseUrl()}/api/products/best-sellers?limit=10`);
+      if (res.ok) setBestSellers(await res.json());
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchBestSellers(); }, [fetchBestSellers]);
+
   const favoriteIds = new Set((favorites ?? []).map((f: { id: number }) => f.id));
   const products = (data?.products ?? []) as Product[];
   const sponsoredProducts = products.filter(p => p.isSponsored);
@@ -373,9 +529,9 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetch(), fetchBestSellers()]);
     setRefreshing(false);
-  }, [refetch]);
+  }, [refetch, fetchBestSellers]);
 
   const handleAddToCart = (product: Product) => {
     addItem({
@@ -475,11 +631,17 @@ export default function HomeScreen() {
             <>
               {/* Vitrin — yalnızca "tümü" görünümünde ve arama yoksa */}
               {selectedCategory === "all" && !search && (
-                <VitrinSection
-                  products={sponsoredProducts}
-                  onProductPress={id => router.push({ pathname: "/product/[id]", params: { id } })}
-                  isSeller={!!user?.isSeller}
-                />
+                <>
+                  <VitrinSection
+                    products={sponsoredProducts}
+                    onProductPress={id => router.push({ pathname: "/product/[id]", params: { id } })}
+                    isSeller={!!user?.isSeller}
+                  />
+                  <BestSellersSection
+                    products={bestSellers}
+                    onProductPress={id => router.push({ pathname: "/product/[id]", params: { id } })}
+                  />
+                </>
               )}
 
               {/* Bölüm başlığı */}
