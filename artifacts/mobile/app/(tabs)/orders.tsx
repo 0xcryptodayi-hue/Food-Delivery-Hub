@@ -43,21 +43,23 @@ const STEPS = [
   { icon: "home",         label: "Teslim"       },
 ];
 
-function ProgressBar({ status }: { status: string }) {
+function ProgressBar({ status, sellerCard = false }: { status: string; sellerCard?: boolean }) {
   const meta = STATUS_META[status];
   if (!meta || meta.step === 0) return null;
   const fillWidthPct = ((meta.step - 1) / (STEPS.length - 1)) * 80;
 
+  const doneColor  = sellerCard ? "#fff" : meta.color;
+  const trackColor = sellerCard ? "rgba(255,255,255,0.25)" : Colors.light.backgroundTertiary;
+  const pendingColor = sellerCard ? "rgba(255,255,255,0.35)" : Colors.light.border;
+
   return (
     <View style={progressStyles.wrap}>
-      {/* Track background — sits behind the circles */}
-      <View style={progressStyles.trackBg} />
+      <View style={[progressStyles.trackBg, { backgroundColor: trackColor }]} />
       <View style={[progressStyles.trackFill, {
         width: `${fillWidthPct}%` as any,
-        backgroundColor: meta.color,
+        backgroundColor: doneColor,
       }]} />
 
-      {/* Step circles + labels */}
       <View style={progressStyles.stepsRow}>
         {STEPS.map((step, i) => {
           const done = i + 1 <= meta.step;
@@ -66,25 +68,27 @@ function ProgressBar({ status }: { status: string }) {
             <View key={i} style={progressStyles.stepCol}>
               <View style={[
                 progressStyles.iconCircle,
-                done && { backgroundColor: meta.color, borderColor: meta.color },
+                done && { backgroundColor: doneColor, borderColor: doneColor },
+                !done && { borderColor: pendingColor, backgroundColor: sellerCard ? "rgba(255,255,255,0.1)" : Colors.light.surface },
                 active && {
                   ...Platform.select({
-                    ios: { shadowColor: meta.color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 6 },
+                    ios: { shadowColor: doneColor, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 6 },
                     android: { elevation: 4 },
                   }),
                 },
               ]}>
                 {done && !active ? (
-                  <Feather name="check" size={13} color="#fff" />
+                  <Feather name="check" size={13} color={sellerCard ? Colors.light.primary : "#fff"} />
                 ) : active ? (
-                  <Feather name={step.icon as any} size={14} color="#fff" />
+                  <Feather name={step.icon as any} size={14} color={sellerCard ? Colors.light.primary : "#fff"} />
                 ) : (
-                  <Feather name={step.icon as any} size={13} color={Colors.light.border} />
+                  <Feather name={step.icon as any} size={13} color={pendingColor} />
                 )}
               </View>
               <Text style={[
                 progressStyles.stepLabel,
-                done && { color: meta.color, fontFamily: "Inter_600SemiBold" },
+                done && { color: doneColor, fontFamily: "Inter_600SemiBold" },
+                !done && sellerCard && { color: "rgba(255,255,255,0.4)" },
               ]} numberOfLines={1}>
                 {step.label}
               </Text>
@@ -133,83 +137,101 @@ function OrderCard({ order, isSeller, onPress }: { order: Order; isSeller: boole
   const items = order.items as Array<{ productTitle: string; quantity: number }>;
   const isActive = ACTIVE_STATUSES.includes(order.status);
 
+  // Satıcı kartları turuncu temalı
+  const S = isSeller;
+  const W = "rgba(255,255,255,0.85)";
+  const WD = "rgba(255,255,255,0.55)";
+
   return (
     <Pressable
-      style={({ pressed }) => [cardStyles.card, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
+      style={({ pressed }) => [
+        cardStyles.card,
+        S && cardStyles.cardSeller,
+        pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] },
+      ]}
       onPress={onPress}
     >
-      {/* Left accent bar */}
-      <View style={[cardStyles.accentBar, { backgroundColor: meta.color }]} />
+      {/* Sol aksent çizgisi */}
+      <View style={[cardStyles.accentBar, { backgroundColor: S ? "rgba(255,255,255,0.55)" : meta.color }]} />
 
       <View style={cardStyles.inner}>
-        {/* Header row */}
+        {/* Başlık satırı */}
         <View style={cardStyles.headerRow}>
           <View style={cardStyles.headerLeft}>
-            <View style={[cardStyles.statusBadge, { backgroundColor: meta.bg, borderColor: meta.accent }]}>
-              <Feather name={meta.icon as "circle"} size={12} color={meta.color} />
-              <Text style={[cardStyles.statusText, { color: meta.color }]}>{meta.label}</Text>
+            <View style={[
+              cardStyles.statusBadge,
+              S
+                ? { backgroundColor: "rgba(255,255,255,0.18)", borderColor: "rgba(255,255,255,0.35)" }
+                : { backgroundColor: meta.bg, borderColor: meta.accent },
+            ]}>
+              <Feather name={meta.icon as "circle"} size={12} color={S ? "#fff" : meta.color} />
+              <Text style={[cardStyles.statusText, { color: S ? "#fff" : meta.color }]}>{meta.label}</Text>
             </View>
             {isActive && (
-              <View style={cardStyles.liveChip}>
-                <View style={[cardStyles.liveDot, { backgroundColor: meta.color }]} />
-                <Text style={[cardStyles.liveText, { color: meta.color }]}>Canlı</Text>
+              <View style={[cardStyles.liveChip, S && { backgroundColor: "rgba(255,255,255,0.18)" }]}>
+                <View style={[cardStyles.liveDot, { backgroundColor: S ? "#fff" : meta.color }]} />
+                <Text style={[cardStyles.liveText, { color: S ? "#fff" : meta.color }]}>Canlı</Text>
               </View>
             )}
           </View>
           <View style={cardStyles.headerRight}>
-            <Text style={cardStyles.orderId}>#{order.id}</Text>
-            <Feather name="chevron-right" size={16} color="#9CA3AF" />
+            <Text style={[cardStyles.orderId, S && { color: W }]}>#{order.id}</Text>
+            <Feather name="chevron-right" size={16} color={S ? WD : "#9CA3AF"} />
           </View>
         </View>
 
-        {/* Divider */}
-        <View style={cardStyles.divider} />
+        {/* Ayraç */}
+        <View style={[cardStyles.divider, S && { backgroundColor: "rgba(255,255,255,0.2)" }]} />
 
-        {/* Body */}
+        {/* İçerik */}
         <View style={cardStyles.body}>
-          {/* Party info */}
           <View style={cardStyles.partyRow}>
-            <View style={[cardStyles.partyAvatar, { backgroundColor: meta.bg }]}>
-              <Feather name={isSeller ? "user" : "home"} size={15} color={meta.color} />
+            <View style={[cardStyles.partyAvatar, { backgroundColor: S ? "rgba(255,255,255,0.2)" : meta.bg }]}>
+              <Feather name={isSeller ? "user" : "home"} size={15} color={S ? "#fff" : meta.color} />
             </View>
             <View style={cardStyles.partyInfo}>
-              <Text style={cardStyles.partyRole}>{isSeller ? "Alıcı" : "Satıcı"}</Text>
-              <Text style={cardStyles.partyName} numberOfLines={1}>
+              <Text style={[cardStyles.partyRole, S && { color: WD }]}>{isSeller ? "Alıcı" : "Satıcı"}</Text>
+              <Text style={[cardStyles.partyName, S && { color: "#fff" }]} numberOfLines={1}>
                 {isSeller ? order.buyerName : order.sellerName}
               </Text>
             </View>
             <View style={cardStyles.priceBlock}>
-              <Text style={[cardStyles.priceValue, { color: meta.color }]}>
+              <Text style={[cardStyles.priceValue, { color: S ? "#fff" : meta.color }]}>
                 ₺{order.totalAmount.toFixed(0)}
               </Text>
-              <Text style={cardStyles.priceLabel}>Toplam</Text>
+              <Text style={[cardStyles.priceLabel, S && { color: WD }]}>Toplam</Text>
             </View>
           </View>
 
-          {/* Items */}
-          <View style={[cardStyles.itemsBox, { backgroundColor: meta.bg }]}>
-            <Feather name="shopping-bag" size={12} color={meta.color} style={{ marginTop: 1 }} />
-            <Text style={[cardStyles.itemsText, { color: meta.color === "#6B7280" ? "#374151" : meta.color }]} numberOfLines={2}>
+          {/* Ürünler */}
+          <View style={[cardStyles.itemsBox, { backgroundColor: S ? "rgba(255,255,255,0.15)" : meta.bg }]}>
+            <Feather name="shopping-bag" size={12} color={S ? "#fff" : meta.color} style={{ marginTop: 1 }} />
+            <Text style={[cardStyles.itemsText, { color: S ? W : (meta.color === "#6B7280" ? "#374151" : meta.color) }]} numberOfLines={2}>
               {items.map(it => `${it.productTitle} × ${it.quantity}`).join("  ·  ")}
             </Text>
           </View>
 
-          {/* Date row */}
+          {/* Tarih */}
           <View style={cardStyles.dateRow}>
-            <Feather name="calendar" size={11} color="#9CA3AF" />
-            <Text style={cardStyles.dateText}>{dateStr} · {timeStr}</Text>
+            <Feather name="calendar" size={11} color={S ? WD : "#9CA3AF"} />
+            <Text style={[cardStyles.dateText, S && { color: WD }]}>{dateStr} · {timeStr}</Text>
           </View>
         </View>
 
-        {/* Progress / Cancelled */}
+        {/* İlerleme / İptal */}
         {order.status === "cancelled" ? (
-          <View style={[cardStyles.cancelledBox, { backgroundColor: meta.bg, borderColor: meta.accent }]}>
-            <Feather name="x-octagon" size={14} color={meta.color} />
-            <Text style={[cardStyles.cancelledText, { color: meta.color }]}>Sipariş iptal edildi</Text>
+          <View style={[
+            cardStyles.cancelledBox,
+            S
+              ? { backgroundColor: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.3)" }
+              : { backgroundColor: meta.bg, borderColor: meta.accent },
+          ]}>
+            <Feather name="x-octagon" size={14} color={S ? "#fff" : meta.color} />
+            <Text style={[cardStyles.cancelledText, { color: S ? "#fff" : meta.color }]}>Sipariş iptal edildi</Text>
           </View>
         ) : (
-          <View style={cardStyles.progressWrap}>
-            <ProgressBar status={order.status} />
+          <View style={[cardStyles.progressWrap, S && cardStyles.progressWrapSeller]}>
+            <ProgressBar status={order.status} sellerCard={S} />
           </View>
         )}
       </View>
@@ -230,6 +252,15 @@ const cardStyles = StyleSheet.create({
       ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 12 },
       android: { elevation: 3 },
       web: { boxShadow: "0 2px 16px rgba(0,0,0,0.07)" },
+    }),
+  },
+  cardSeller: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primaryDark,
+    ...Platform.select({
+      ios: { shadowColor: Colors.light.primaryDark, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12 },
+      android: { elevation: 5 },
+      web: { boxShadow: "0 4px 20px rgba(196,82,26,0.3)" },
     }),
   },
   accentBar: { width: 4, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 },
@@ -284,6 +315,9 @@ const cardStyles = StyleSheet.create({
 
   progressWrap: {
     borderTopWidth: 1, borderTopColor: Colors.light.borderLight, marginTop: 6, paddingTop: 10,
+  },
+  progressWrapSeller: {
+    borderTopColor: "rgba(255,255,255,0.2)",
   },
 
   cancelledBox: {
