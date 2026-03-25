@@ -387,21 +387,26 @@ function CategoryModal({
   const slideAnim = useRef(new Animated.Value(500)).current;
   const dragAnim = useRef(new Animated.Value(0)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+  const isDragClosing = useRef(false);
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (visible) {
+      isDragClosing.current = false;
       dragAnim.setValue(0);
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
         Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
       ]).start();
     } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 500, duration: 220, useNativeDriver: true }),
-        Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      ]).start();
+      // Sürükleyerek kapanıyorsa animasyon zaten çalıştı, tekrar çalıştırma
+      if (!isDragClosing.current) {
+        Animated.parallel([
+          Animated.timing(slideAnim, { toValue: 500, duration: 220, useNativeDriver: true }),
+          Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+        ]).start();
+      }
       setExpanded(null);
     }
   }, [visible]);
@@ -415,9 +420,10 @@ function CategoryModal({
       },
       onPanResponderRelease: (_, g) => {
         if (g.dy > 80 || g.vy > 0.5) {
+          isDragClosing.current = true;
           Animated.parallel([
-            Animated.timing(dragAnim, { toValue: 600, duration: 220, useNativeDriver: true }),
-            Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+            Animated.timing(dragAnim, { toValue: 600, duration: 200, useNativeDriver: true }),
+            Animated.timing(backdropAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
           ]).start(() => {
             dragAnim.setValue(0);
             onClose();
