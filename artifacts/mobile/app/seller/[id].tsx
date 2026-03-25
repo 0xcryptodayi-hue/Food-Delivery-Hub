@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetUser, useGetUserProducts, useGetSellerReviews, useCreateConversation } from "@workspace/api-client-react";
+import { useGetUser, useGetUserProducts, useGetSellerReviews, useCreateConversation, getBaseUrl } from "@workspace/api-client-react";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -225,7 +225,7 @@ export default function SellerScreen() {
   useEffect(() => {
     const sellerId = parseInt(id ?? "0");
     if (!sellerId) return;
-    fetch(`${process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : ""}/api/hygiene/seller/${sellerId}`)
+    fetch(`${getBaseUrl()}/api/hygiene/seller/${sellerId}`)
       .then(r => r.json())
       .then(d => setHygieneData(d))
       .catch(() => {});
@@ -351,7 +351,7 @@ export default function SellerScreen() {
         </View>
 
         {/* Hygiene Profile card */}
-        {hygieneData != null && (hygieneData.platformScore != null || hygieneData.declarations != null) && (
+        {hygieneData != null && (hygieneData.platformScore != null || (hygieneData.declarations != null && Object.entries(hygieneData.declarations).some(([k, v]) => k !== "note" && k !== "updatedAt" && v === true))) && (
           <View style={styles.hygieneCard}>
             <View style={styles.hygieneCardHeader}>
               <View style={styles.hygieneCardIconWrap}>
