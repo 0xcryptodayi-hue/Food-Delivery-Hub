@@ -39,34 +39,56 @@ type Order = {
   deliveryAddress?: string;
 };
 
+const STEPS: { icon: string; label: string }[] = [
+  { icon: "check-circle", label: "Alındı"       },
+  { icon: "clock",        label: "Hazırlanıyor" },
+  { icon: "package",      label: "Hazır"        },
+  { icon: "truck",        label: "Yolda"        },
+  { icon: "home",         label: "Teslim"       },
+];
+
 function StepDots({ status }: { status: string }) {
   const meta = STATUS_META[status];
   if (!meta || meta.step === 0) return null;
-  const steps = [1, 2, 3, 4, 5];
   return (
     <View style={stepStyles.row}>
-      {steps.map((s, i) => (
-        <React.Fragment key={s}>
-          <View style={[stepStyles.dot, s <= meta.step && { backgroundColor: meta.color }]}>
-            {s <= meta.step && <Feather name="check" size={8} color="#fff" />}
-          </View>
-          {i < steps.length - 1 && (
-            <View style={[stepStyles.line, s < meta.step && { backgroundColor: meta.color }]} />
-          )}
-        </React.Fragment>
-      ))}
+      {STEPS.map((step, i) => {
+        const done = i + 1 <= meta.step;
+        const active = i + 1 === meta.step;
+        const iconColor = done ? meta.color : Colors.light.borderLight;
+        const bgColor = done ? meta.color + "18" : Colors.light.backgroundSecondary;
+        return (
+          <React.Fragment key={i}>
+            <View style={stepStyles.stepCol}>
+              <View style={[stepStyles.iconCircle, { backgroundColor: bgColor }, active && { borderWidth: 1.5, borderColor: meta.color }]}>
+                <Feather name={step.icon as "home"} size={13} color={iconColor} />
+              </View>
+              <Text style={[stepStyles.stepLabel, done && { color: meta.color }]} numberOfLines={1}>
+                {step.label}
+              </Text>
+            </View>
+            {i < STEPS.length - 1 && (
+              <View style={[stepStyles.line, i + 1 < meta.step && { backgroundColor: meta.color }]} />
+            )}
+          </React.Fragment>
+        );
+      })}
     </View>
   );
 }
 
 const stepStyles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 0 },
-  dot: {
-    width: 16, height: 16, borderRadius: 8,
-    backgroundColor: Colors.light.borderLight,
+  row: { flexDirection: "row", alignItems: "flex-start", flex: 1 },
+  stepCol: { alignItems: "center", gap: 3, width: 44 },
+  iconCircle: {
+    width: 30, height: 30, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
   },
-  line: { flex: 1, height: 2, backgroundColor: Colors.light.borderLight, marginHorizontal: 2 },
+  stepLabel: {
+    fontSize: 8, fontFamily: "Inter_500Medium",
+    color: Colors.light.borderLight, textAlign: "center",
+  },
+  line: { flex: 1, height: 2, backgroundColor: Colors.light.borderLight, marginTop: 14, marginHorizontal: -2 },
 });
 
 function OrderCard({ order, isSeller, onPress }: { order: Order; isSeller: boolean; onPress: () => void }) {
@@ -126,7 +148,7 @@ function OrderCard({ order, isSeller, onPress }: { order: Order; isSeller: boole
       {order.status !== "cancelled" && (
         <View style={cardStyles.progressRow}>
           <StepDots status={order.status} />
-          <Feather name="chevron-right" size={16} color={Colors.light.textMuted} style={{ marginLeft: 8 }} />
+          <Feather name="chevron-right" size={16} color={Colors.light.textMuted} />
         </View>
       )}
 
@@ -193,8 +215,9 @@ const cardStyles = StyleSheet.create({
 
   progressRow: {
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 14, paddingBottom: 14, paddingTop: 4,
+    paddingHorizontal: 14, paddingBottom: 12, paddingTop: 8,
     borderTopWidth: 1, borderTopColor: Colors.light.borderLight,
+    gap: 6,
   },
   cancelledBar: {
     flexDirection: "row", alignItems: "center", gap: 6,
