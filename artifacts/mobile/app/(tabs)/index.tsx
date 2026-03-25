@@ -559,22 +559,13 @@ export default function HomeScreen() {
 
       {/* ── Arama Barı (header altında) ── */}
       <View style={styles.searchBarWrap}>
-        <View style={styles.searchBar}>
+        <Pressable
+          style={styles.searchBar}
+          onPress={() => router.push("/search")}
+        >
           <Feather name="search" size={16} color={Colors.light.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Yemek veya satıcı ara..."
-            placeholderTextColor={Colors.light.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")} hitSlop={10}>
-              <Feather name="x-circle" size={15} color={Colors.light.textMuted} />
-            </Pressable>
-          )}
-        </View>
+          <Text style={styles.searchPlaceholder}>Yemek veya satıcı ara...</Text>
+        </Pressable>
       </View>
 
       {/* ── Active filter pill ── */}
@@ -699,6 +690,10 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1, fontFamily: "Inter_400Regular",
     fontSize: 14, color: Colors.light.text,
+  },
+  searchPlaceholder: {
+    flex: 1, fontFamily: "Inter_400Regular",
+    fontSize: 14, color: Colors.light.textMuted,
   },
 
   headerActions: { flexDirection: "row", gap: 2, alignItems: "center" },
