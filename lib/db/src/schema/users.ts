@@ -16,6 +16,7 @@ export const usersTable = pgTable("users", {
   bio: text("bio"),
   rating: real("rating"),
   reviewCount: integer("review_count").notNull().default(0),
+  storeImage: text("store_image"),
   isSeller: boolean("is_seller").notNull().default(false),
   isVerified: boolean("is_verified").notNull().default(false),
   totalOrders: integer("total_orders").notNull().default(0),

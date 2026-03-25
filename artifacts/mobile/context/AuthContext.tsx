@@ -9,6 +9,7 @@ export type User = {
   phone?: string | null;
   role: string;
   avatar?: string | null;
+  storeImage?: string | null;
   address?: string | null;
   lat?: number | null;
   lng?: number | null;
