@@ -8,12 +8,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
-import { useGetProduct, useToggleFavorite, getGetFavoritesQueryKey } from "@workspace/api-client-react";
+import { useGetProduct, useToggleFavorite, getGetFavoritesQueryKey, getBaseUrl } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+const API_BASE = `${getBaseUrl()}/api`;
 
 type ProductReview = {
   id: number;

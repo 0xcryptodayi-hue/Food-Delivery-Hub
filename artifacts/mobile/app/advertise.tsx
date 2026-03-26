@@ -7,9 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
+import { getBaseUrl } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+const API_BASE = `${getBaseUrl()}/api`;
 
 interface AdPackage {
   id: string;

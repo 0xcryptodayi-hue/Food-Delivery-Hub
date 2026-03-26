@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
-import { useGetOrder, useUpdateOrderStatus, useCreateReview } from "@workspace/api-client-react";
+import { useGetOrder, useUpdateOrderStatus, useCreateReview, getBaseUrl } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 
 const STATUS_STEPS = ["received", "preparing", "ready", "on_the_way", "delivered"];
@@ -64,7 +64,7 @@ export default function OrderDetailScreen() {
 
   useEffect(() => {
     if (!order || !user || !isBuyer || order.status !== "delivered") return;
-    fetch(`${process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : ""}/api/hygiene/check/${order.id}`, {
+    fetch(`${getBaseUrl()}/api/hygiene/check/${order.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
@@ -124,7 +124,7 @@ export default function OrderDetailScreen() {
     if (!order) return;
     setHygieneSubmitting(true);
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : ""}/api/hygiene`, {
+      const res = await fetch(`${getBaseUrl()}/api/hygiene`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ sellerId: order.sellerId, orderId: order.id, score: hygieneRating, comment: hygieneComment || undefined }),
