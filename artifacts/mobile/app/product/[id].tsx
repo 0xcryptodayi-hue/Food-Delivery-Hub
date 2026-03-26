@@ -12,6 +12,7 @@ import { useGetProduct, useToggleFavorite, getGetFavoritesQueryKey, getBaseUrl }
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSound } from "@/hooks/useSound";
 
 const API_BASE = `${getBaseUrl()}/api`;
 
@@ -29,6 +30,7 @@ export default function ProductDetailScreen() {
   const { user } = useAuth();
   const { addItem, items } = useCart();
   const queryClient = useQueryClient();
+  const { play } = useSound();
   const [qty, setQty] = useState(1);
   const [localFavorited, setLocalFavorited] = useState<boolean | null>(null);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
@@ -76,6 +78,7 @@ export default function ProductDetailScreen() {
       });
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    play("add_to_cart");
     showBanner();
   };
 

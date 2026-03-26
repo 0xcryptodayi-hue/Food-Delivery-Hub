@@ -10,6 +10,7 @@ import Colors from "@/constants/colors";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useCreateOrder } from "@workspace/api-client-react";
+import { useSound } from "@/hooks/useSound";
 
 const DELIVERY_FEE = 15;
 
@@ -23,6 +24,7 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(false);
 
   const createOrderMutation = useCreateOrder();
+  const { play } = useSound();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const sellerGroups = items.reduce<Record<number, typeof items>>((acc, item) => {
@@ -55,6 +57,7 @@ export default function CheckoutScreen() {
         });
       }
       clearCart();
+      play("order_complete");
       Alert.alert(
         "Sipariş Verildi! 🎉",
         numSellers > 1

@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useGetMessages, useSendMessage, useGetConversations } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
+import { useSound } from "@/hooks/useSound";
 
 type Message = {
   id: number;
@@ -30,6 +31,8 @@ export default function ChatScreen() {
   const { data: messages, isLoading, refetch } = useGetMessages(parseInt(id ?? "0"));
   const { data: conversations } = useGetConversations();
   const sendMessageMutation = useSendMessage();
+  const { play } = useSound();
+  const prevMsgCount = useRef(0);
 
   const conversation = (conversations ?? []).find(c => c.id === parseInt(id ?? "0"));
   const otherUser = conversation?.otherUser;
@@ -39,12 +42,25 @@ export default function ChatScreen() {
     return () => clearInterval(interval);
   }, [refetch]);
 
+  useEffect(() => {
+    if (!messages) return;
+    const count = messages.length;
+    if (count > prevMsgCount.current && prevMsgCount.current > 0) {
+      const newMsgs = (messages as Message[]).slice(prevMsgCount.current);
+      if (newMsgs.some(m => m.senderId !== user?.id)) {
+        play("message_received");
+      }
+    }
+    prevMsgCount.current = count;
+  }, [messages]);
+
   const handleSend = async () => {
     if (!text.trim() || !id) return;
     const content = text.trim();
     setText("");
     try {
       await sendMessageMutation.mutateAsync({ id: parseInt(id), data: { content } });
+      play("message_received");
       refetch();
     } catch {
       setText(content);

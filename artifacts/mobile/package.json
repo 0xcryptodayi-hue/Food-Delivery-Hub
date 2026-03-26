@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@nkzw/create-context-hook": "^1.1.0",
+    "expo-av": "^16.0.8",
     "react-native-maps": "1.18.0"
   }
 }
